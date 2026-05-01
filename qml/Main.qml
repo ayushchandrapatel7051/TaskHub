@@ -35,8 +35,8 @@ ApplicationWindow {
             color: Theme.background
 
             RowLayout {
-            anchors.fill: parent
-            spacing: 0
+                anchors.fill: parent
+                spacing: 0
             
             Sidebar {
                 Layout.preferredWidth: 290
@@ -61,9 +61,9 @@ ApplicationWindow {
             }
             
             TaskDetail {
-                Layout.preferredWidth: 0
+                Layout.preferredWidth: 340
                 Layout.fillHeight: true
-                visible: false
+                visible: true
             }
             }
         }

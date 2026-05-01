@@ -52,12 +52,18 @@ Rectangle {
             spacing: 8
 
             Repeater {
-                model: ["All", "Today", "Next 7 Days", "Inbox", "Summary"]
+                model: [
+                    { name: "All", count: "117" },
+                    { name: "Today", count: "6" },
+                    { name: "Next 7 Days", count: "6" },
+                    { name: "Inbox", count: "1" },
+                    { name: "Summary", count: "" }
+                ]
                 Rectangle {
                     Layout.fillWidth: true
                     height: 38
                     radius: 7
-                    color: taskListViewModel.activeFilterDate === modelData ? Theme.surfaceHover : "transparent"
+                    color: taskListViewModel.activeFilterDate === modelData.name ? Theme.surfaceHover : "transparent"
 
                     RowLayout {
                         anchors.fill: parent
@@ -65,19 +71,25 @@ Rectangle {
                         anchors.rightMargin: 10
 
                         Text {
-                            text: modelData
+                            text: modelData.name
                             color: Theme.textPrimary
                             font.pixelSize: 15
                             font.family: Theme.fontFamily
                         }
                         Item { Layout.fillWidth: true }
+                        Text {
+                            text: modelData.count
+                            color: Theme.textMuted
+                            font.pixelSize: 13
+                            visible: modelData.count !== ""
+                        }
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
-                        onClicked: taskListViewModel.setFilterDate(modelData)
+                        onClicked: taskListViewModel.setFilterDate(modelData.name)
                     }
                 }
             }

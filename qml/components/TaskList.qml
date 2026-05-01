@@ -9,6 +9,8 @@ Rectangle {
     // ── Priority picker popup ──────────────────────────────────────────
     Popup {
         id: priorityPicker
+        parent: Overlay.overlay
+        modal: false
         width: 220
         height: 60
         padding: 0
@@ -78,6 +80,8 @@ Rectangle {
     // ── Date picker popup ──────────────────────────────────────────────
     Popup {
         id: datePicker
+        parent: Overlay.overlay
+        modal: false
         width: 240
         height: 170
         padding: 0
@@ -410,8 +414,9 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    datePicker.x = mapToItem(null, 0, 0).x
-                                    datePicker.y = mapToItem(null, 0, 0).y - datePicker.height - 6
+                                    var pos = mapToItem(Overlay.overlay, 0, height)
+                                    datePicker.x = Math.max(12, Math.min(pos.x - datePicker.width + width, Overlay.overlay.width - datePicker.width - 12))
+                                    datePicker.y = Math.min(pos.y + 8, Overlay.overlay.height - datePicker.height - 12)
                                     datePicker.open()
                                 }
                             }
@@ -448,8 +453,9 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    priorityPicker.x = mapToItem(null, 0, 0).x
-                                    priorityPicker.y = mapToItem(null, 0, 0).y - priorityPicker.height - 6
+                                    var pos = mapToItem(Overlay.overlay, 0, height)
+                                    priorityPicker.x = Math.max(12, Math.min(pos.x - priorityPicker.width + width, Overlay.overlay.width - priorityPicker.width - 12))
+                                    priorityPicker.y = Math.min(pos.y + 8, Overlay.overlay.height - priorityPicker.height - 12)
                                     priorityPicker.open()
                                 }
                             }
