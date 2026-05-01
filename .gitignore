@@ -1,0 +1,50 @@
+# Build directories
+build/
+build-*/
+.cache/
+
+# CMake files
+CMakeCache.txt
+CMakeFiles
+CMakeScripts
+Testing
+Makefile
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+*.dir/
+
+# Qt specific
+.qt/
+*.user
+*.pro.user
+*.pro.user.*
+qrc_*.cpp
+moc_*.cpp
+ui_*.h
+
+# Object files
+*.o
+*.obj
+*.so
+*.dll
+*.dylib
+*.a
+*.lib
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+
+# Logs and databases
+*.log
+*.db
+*.sqlite
+
+# Secret Configuration Files
+resources/firebase_config.json
