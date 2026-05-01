@@ -81,6 +81,7 @@ Rectangle {
     // ── Date picker popup (Custom Calendar) ───────────────────────────
     Popup {
         id: datePicker
+        objectName: "datePicker"
         parent: Overlay.overlay
         modal: false
         width: 320
@@ -88,8 +89,6 @@ Rectangle {
         padding: 0
         z: 1000
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-
-        onAboutToShow: priorityPicker.close()
 
         background: Rectangle {
             color: "#1e1e2e"
@@ -221,7 +220,14 @@ Rectangle {
                             onClicked: {
                                 addBar.selectedDate = modelData.dateString
                                 calendarHelper.selectDate(modelData.dateString)
-                                datePicker.close()
+                                // Close popup through parent chain
+                                var p = parent
+                                while (p && p.objectName !== "datePicker") {
+                                    p = p.parent
+                                }
+                                if (p && typeof p.close === "function") {
+                                    p.close()
+                                }
                             }
                         }
                     }

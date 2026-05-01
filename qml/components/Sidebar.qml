@@ -51,13 +51,14 @@ Rectangle {
             anchors.margins: 10
             spacing: 8
 
+            // Quick filters
             Repeater {
                 model: [
-                    { name: "All", count: "117" },
-                    { name: "Today", count: "6" },
-                    { name: "Next 7 Days", count: "6" },
-                    { name: "Inbox", count: "1" },
-                    { name: "Summary", count: "" }
+                    { name: "All", icon: "👤" },
+                    { name: "Today", icon: "✓" },
+                    { name: "Next 7 Days", icon: "📅" },
+                    { name: "Inbox", icon: "◉" },
+                    { name: "Summary", icon: "🕘" }
                 ]
                 Rectangle {
                     Layout.fillWidth: true
@@ -69,6 +70,7 @@ Rectangle {
                         anchors.fill: parent
                         anchors.leftMargin: 10
                         anchors.rightMargin: 10
+                        spacing: 8
 
                         Text {
                             text: modelData.name
@@ -78,10 +80,9 @@ Rectangle {
                         }
                         Item { Layout.fillWidth: true }
                         Text {
-                            text: modelData.count
+                            text: getTaskCount(modelData.name)
                             color: Theme.textMuted
                             font.pixelSize: 13
-                            visible: modelData.count !== ""
                         }
                     }
 
@@ -94,32 +95,103 @@ Rectangle {
                 }
             }
 
-            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.divider; Layout.topMargin: 6; Layout.bottomMargin: 8 }
+            Rectangle { 
+                Layout.fillWidth: true
+                height: 1
+                color: Theme.divider
+                Layout.topMargin: 6
+                Layout.bottomMargin: 8
+            }
 
-            Text { text: "Lists"; color: Theme.textMuted; font.pixelSize: 14; font.bold: true; font.family: Theme.fontFamily }
+            Text { 
+                text: "Lists"
+                color: Theme.textMuted
+                font.pixelSize: 14
+                font.bold: true
+                font.family: Theme.fontFamily
+            }
 
+            // List filters (tags)
             Repeater {
-                model: ["My 2025 Goals", "Programming", "Finance", "Skills", "Work"]
+                model: taskListViewModel.getAllTags()
                 Rectangle {
                     Layout.fillWidth: true
                     height: 36
                     radius: 7
-                    color: listHover.containsMouse ? Theme.surfaceHover : "transparent"
+                    color: taskListViewModel.activeFilterTag === modelData ? Theme.primary + "22" : (listHover.containsMouse ? Theme.surfaceHover : "transparent")
+                    border.color: taskListViewModel.activeFilterTag === modelData ? Theme.primary : "transparent"
+                    border.width: taskListViewModel.activeFilterTag === modelData ? 1 : 0
 
-                    Text {
-                        anchors.verticalCenter: parent.verticalCenter
-                        anchors.left: parent.left
+                    RowLayout {
+                        anchors.fill: parent
                         anchors.leftMargin: 10
-                        text: modelData
-                        color: Theme.textPrimary
-                        font.pixelSize: 14
-                        font.family: Theme.fontFamily
+                        anchors.rightMargin: 10
+                        spacing: 8
+
+                        Text {
+                            text: modelData
+                            color: taskListViewModel.activeFilterTag === modelData ? Theme.primary : Theme.textPrimary
+                            font.pixelSize: 14
+                            font.family: Theme.fontFamily
+                        }
+                        Item { Layout.fillWidth: true }
+                        Text {
+                            text: getTagTaskCount(modelData)
+                            color: Theme.textMuted
+                            font.pixelSize: 12
+                        }
                     }
+
                     HoverHandler { id: listHover }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: taskListViewModel.setFilterTag(modelData)
+                    }
                 }
             }
 
             Item { Layout.fillHeight: true }
         }
+    }
+
+    // Helper functions to calculate task counts
+    function getTaskCount(filterName) {
+        // Return the count based on the filter type
+        switch(filterName) {
+            case "All": return taskListViewModel.rowCount()
+            case "Today": return getFilteredCount("Today")
+            case "Next 7 Days": return getFilteredCount("Upcoming")
+            case "Inbox": return getFilteredCount("No Date")
+            case "Summary": return ""
+            default: return 0
+        }
+    }
+
+    function getFilteredCount(section) {
+        var count = 0
+        // SectionRole = Qt::UserRole + 9 = 256 + 9 = 265
+        for (var i = 0; i < taskListViewModel.rowCount(); i++) {
+            var sectionData = taskListViewModel.data(taskListViewModel.index(i, 0), 265)
+            if (sectionData === section) count++
+        }
+        return count
+    }
+
+    function getTagTaskCount(tag) {
+        var count = 0
+        // TagsRole = Qt::UserRole + 10 = 256 + 10 = 266
+        for (var i = 0; i < taskListViewModel.rowCount(); i++) {
+            var tagsData = taskListViewModel.data(taskListViewModel.index(i, 0), 266)
+            if (tagsData && typeof tagsData === 'object') {
+                if (tagsData.indexOf && tagsData.indexOf(tag) !== -1) {
+                    count++
+                } else if (tagsData.includes && tagsData.includes(tag)) {
+                    count++
+                }
+            }
+        }
+        return count
     }
 }
