@@ -89,7 +89,36 @@ bool LocalCacheService::saveTask(const Task& task) {
 }
 
 bool LocalCacheService::updateTask(const Task& task) {
-    return saveTask(task);
+    QSqlQuery query(m_db);
+    query.prepare("UPDATE tasks SET listId = :listId, title = :title, description = :description, "
+                  "priority = :priority, status = :status, dueAt = :dueAt, startAt = :startAt, "
+                  "repeatRule = :repeatRule, tags = :tags, isPinned = :isPinned, "
+                  "isCompleted = :isCompleted, orderIndex = :orderIndex, updatedAt = :updatedAt "
+                  "WHERE id = :id");
+    
+    QVariantMap map = task.toVariantMap();
+    query.bindValue(":listId", map["listId"]);
+    query.bindValue(":title", map["title"]);
+    query.bindValue(":description", map["description"]);
+    query.bindValue(":priority", map["priority"]);
+    query.bindValue(":status", map["status"]);
+    query.bindValue(":dueAt", map["dueAt"]);
+    query.bindValue(":startAt", map["startAt"]);
+    query.bindValue(":repeatRule", map["repeatRule"]);
+    query.bindValue(":tags", task.tags.join(","));
+    query.bindValue(":isPinned", map["isPinned"].toBool() ? 1 : 0);
+    query.bindValue(":isCompleted", map["isCompleted"].toBool() ? 1 : 0);
+    query.bindValue(":orderIndex", map["orderIndex"]);
+    query.bindValue(":updatedAt", map["updatedAt"]);
+    query.bindValue(":id", map["id"]);
+    
+    if (!query.exec()) {
+        qWarning() << "[LocalCacheService] Failed to update task:" << query.lastError().text();
+        return false;
+    }
+    
+    qDebug() << "[LocalCacheService] updateTask success! Rows affected:" << query.numRowsAffected() << "for ID:" << map["id"];
+    return true;
 }
 
 bool LocalCacheService::deleteTask(const QString& taskId) {
@@ -131,6 +160,7 @@ Task LocalCacheService::getTask(const QString& taskId) {
     QSqlQuery query(m_db);
     query.prepare("SELECT * FROM tasks WHERE id = :id");
     query.bindValue(":id", taskId);
+    query.exec(); // CRITICAL FIX: The query must be executed!
     
     if (query.next()) {
         Task task;
@@ -150,7 +180,9 @@ Task LocalCacheService::getTask(const QString& taskId) {
         task.createdAt = QDateTime::fromString(query.value("createdAt").toString(), Qt::ISODate);
         task.updatedAt = QDateTime::fromString(query.value("updatedAt").toString(), Qt::ISODate);
         
+        qDebug() << "[LocalCacheService] getTask FETCHED ID:" << task.id;
         return task;
     }
+    qDebug() << "[LocalCacheService] getTask COULD NOT FIND ID:" << taskId;
     return Task();
 }

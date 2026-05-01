@@ -110,9 +110,14 @@ void TaskListViewModel::addTask(const QString& title, const QString& description
 }
 
 void TaskListViewModel::toggleTaskCompletion(int row) {
-    if (row < 0 || row >= m_tasks.count()) return;
+    qDebug() << "[TaskListViewModel] toggleTaskCompletion called for row:" << row;
+    if (row < 0 || row >= m_tasks.count()) {
+        qDebug() << "[TaskListViewModel] Invalid row! Count is:" << m_tasks.count();
+        return;
+    }
     
     Task task = m_tasks[row];
+    qDebug() << "[TaskListViewModel] Task found:" << task.title << "ID:" << task.id;
     QString newStatus = task.isCompleted ? "todo" : "completed";
     m_taskService->updateTaskStatus(task.id, newStatus);
 }
@@ -128,7 +133,12 @@ void TaskListViewModel::renameTask(int row, const QString& newTitle) {
 }
 
 void TaskListViewModel::softDeleteTask(int row) {
-    if (row < 0 || row >= m_tasks.count()) return;
+    qDebug() << "[TaskListViewModel] softDeleteTask called for row:" << row;
+    if (row < 0 || row >= m_tasks.count()) {
+        qDebug() << "[TaskListViewModel] Invalid row for delete! Count is:" << m_tasks.count();
+        return;
+    }
+    qDebug() << "[TaskListViewModel] Deleting task:" << m_tasks[row].title << "ID:" << m_tasks[row].id;
     m_taskService->deleteTask(m_tasks[row].id);
 }
 
