@@ -139,8 +139,8 @@ void TaskListViewModel::loadTasks() {
     endResetModel();
 }
 
-void TaskListViewModel::addTask(const QString& title, const QString& description) {
-    m_taskService->createTask(title, description);
+void TaskListViewModel::addTask(const QString& title, const QString& description, int priority, const QString& dueAt) {
+    m_taskService->createTask(title, description, priority, dueAt);
 }
 
 void TaskListViewModel::toggleTaskCompletion(int row) {

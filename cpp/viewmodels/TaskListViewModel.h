@@ -28,7 +28,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void loadTasks();
-    Q_INVOKABLE void addTask(const QString& title, const QString& description);
+    Q_INVOKABLE void addTask(const QString& title, const QString& description, int priority = 0, const QString& dueAt = "");
     Q_INVOKABLE void toggleTaskCompletion(int row);
     Q_INVOKABLE void renameTask(int row, const QString& newTitle);
     Q_INVOKABLE void softDeleteTask(int row);

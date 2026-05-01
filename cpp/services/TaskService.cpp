@@ -1,4 +1,5 @@
 #include "TaskService.h"
+#include <QDateTime>
 
 TaskService::TaskService(LocalCacheService* cacheService, QObject *parent)
     : QObject(parent), m_cacheService(cacheService) {
@@ -8,11 +9,19 @@ QList<Task> TaskService::getTasks(const QString& searchQuery) {
     return m_cacheService->getAllTasks(searchQuery);
 }
 
-bool TaskService::createTask(const QString& title, const QString& description) {
+bool TaskService::createTask(const QString& title, const QString& description, int priority, const QString& dueAt) {
     Task task;
     task.title = title;
     task.description = description;
-    
+    task.priority = priority;
+    if (!dueAt.isEmpty()) {
+        task.dueAt = QDateTime::fromString(dueAt, Qt::ISODate);
+        if (!task.dueAt.isValid()) {
+            // Try date-only format yyyy-MM-dd
+            task.dueAt = QDateTime(QDate::fromString(dueAt, "yyyy-MM-dd"), QTime(0, 0));
+        }
+    }
+
     if (m_cacheService->saveTask(task)) {
         emit tasksChanged();
         return true;
