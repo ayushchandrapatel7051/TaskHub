@@ -15,10 +15,10 @@ public:
 
     // REST API methods for Firestore
     void syncTasksUp(const QList<Task>& tasksToSync);
-    void fetchRemoteTasks();
+    void fetchRemoteTasks(const QString& pageToken = "");
 
 signals:
-    void syncCompleted(bool success);
+    void syncCompleted(bool success, const QStringList& syncedTaskIds);
     void remoteTasksFetched(const QList<Task>& tasks);
 
 private slots:

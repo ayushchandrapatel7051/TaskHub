@@ -16,11 +16,13 @@ public:
     bool initializeDB();
 
     // Task Operations
-    bool saveTask(const Task& task);
+    bool saveTask(const Task& task, bool isDirty = true);
     bool updateTask(const Task& task);
     bool deleteTask(const QString& taskId);
-    QList<Task> getAllTasks();
+    QList<Task> getAllTasks(const QString& searchQuery = "");
+    QList<Task> getDirtyTasks();
     Task getTask(const QString& taskId);
+    void clearDirtyFlag(const QString& taskId);
 
 private:
     QSqlDatabase m_db;

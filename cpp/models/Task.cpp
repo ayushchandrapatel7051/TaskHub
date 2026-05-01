@@ -7,10 +7,11 @@ Task::Task()
       status("todo"),
       isPinned(false),
       isCompleted(false),
-      orderIndex(0)
+      orderIndex(0),
+      createdAt(QDateTime::currentDateTime()),
+      updatedAt(QDateTime::currentDateTime()),
+      isDirty(true)
 {
-    createdAt = QDateTime::currentDateTime();
-    updatedAt = createdAt;
 }
 
 Task Task::fromVariantMap(const QVariantMap& map) {
@@ -30,6 +31,7 @@ Task Task::fromVariantMap(const QVariantMap& map) {
     task.orderIndex = map.value("orderIndex").toInt();
     task.createdAt = QDateTime::fromString(map.value("createdAt").toString(), Qt::ISODate);
     task.updatedAt = QDateTime::fromString(map.value("updatedAt").toString(), Qt::ISODate);
+    task.isDirty = map.value("isDirty", false).toBool();
     return task;
 }
 
@@ -50,5 +52,6 @@ QVariantMap Task::toVariantMap() const {
     map["orderIndex"] = orderIndex;
     map["createdAt"] = createdAt.isValid() ? createdAt.toString(Qt::ISODate) : "";
     map["updatedAt"] = updatedAt.isValid() ? updatedAt.toString(Qt::ISODate) : "";
+    map["isDirty"] = isDirty;
     return map;
 }

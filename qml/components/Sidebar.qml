@@ -44,13 +44,28 @@ Rectangle {
         }
 
         // Navigation Items
+        Text {
+            text: "Views"
+            color: Theme.textMuted
+            font.pixelSize: 12
+            font.bold: true
+            font.family: Theme.fontFamily
+            Layout.leftMargin: 10
+            Layout.topMargin: 10
+        }
+
         Repeater {
             model: ["Inbox", "Today", "Next 7 Days", "Calendar"]
             
             Rectangle {
                 Layout.fillWidth: true
                 height: 40
-                color: itemMouseArea.containsMouse ? Theme.surfaceHover : "transparent"
+                color: {
+                    if (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "") {
+                        return Theme.primary + "33" // 20% opacity primary
+                    }
+                    return itemMouseArea.containsMouse ? Theme.surfaceHover : "transparent"
+                }
                 radius: Theme.radiusMedium
                 
                 Text {
@@ -58,8 +73,9 @@ Rectangle {
                     anchors.left: parent.left
                     anchors.leftMargin: 15
                     text: modelData
-                    color: Theme.textPrimary
+                    color: (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "") ? Theme.primary : Theme.textPrimary
                     font.pixelSize: 15
+                    font.bold: (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "")
                     font.family: Theme.fontFamily
                 }
                 
@@ -67,6 +83,57 @@ Rectangle {
                     id: itemMouseArea
                     anchors.fill: parent
                     hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        taskListViewModel.setFilterDate(modelData)
+                    }
+                }
+            }
+        }
+        
+        // Tags Section
+        Text {
+            text: "Tags"
+            color: Theme.textMuted
+            font.pixelSize: 12
+            font.bold: true
+            font.family: Theme.fontFamily
+            Layout.leftMargin: 10
+            Layout.topMargin: 20
+        }
+        
+        Repeater {
+            model: taskListViewModel.getAllTags()
+            
+            Rectangle {
+                Layout.fillWidth: true
+                height: 35
+                color: {
+                    if (taskListViewModel.activeFilterTag === modelData) {
+                        return Theme.primary + "33"
+                    }
+                    return tagMouseArea.containsMouse ? Theme.surfaceHover : "transparent"
+                }
+                radius: Theme.radiusMedium
+                
+                Text {
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.left: parent.left
+                    anchors.leftMargin: 15
+                    text: "#" + modelData
+                    color: taskListViewModel.activeFilterTag === modelData ? Theme.primary : Theme.textSecondary
+                    font.pixelSize: 14
+                    font.family: Theme.fontFamily
+                }
+                
+                MouseArea {
+                    id: tagMouseArea
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        taskListViewModel.setFilterTag(modelData)
+                    }
                 }
             }
         }

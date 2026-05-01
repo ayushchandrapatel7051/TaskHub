@@ -4,8 +4,8 @@ TaskService::TaskService(LocalCacheService* cacheService, QObject *parent)
     : QObject(parent), m_cacheService(cacheService) {
 }
 
-QList<Task> TaskService::getTasks() {
-    return m_cacheService->getAllTasks();
+QList<Task> TaskService::getTasks(const QString& searchQuery) {
+    return m_cacheService->getAllTasks(searchQuery);
 }
 
 bool TaskService::createTask(const QString& title, const QString& description) {

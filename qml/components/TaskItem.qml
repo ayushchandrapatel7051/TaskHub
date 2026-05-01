@@ -7,9 +7,12 @@ Rectangle {
     id: root
     height: visible ? 60 : 0
     visible: !isSectionCollapsed
-    color: mouseArea.containsMouse ? Theme.surfaceHover : Theme.surface
+    property bool isSelected: root.taskIndex === taskListViewModel.selectedTaskIndex
+    
+    color: isSelected ? Theme.surfaceHover : (mouseArea.containsMouse ? Theme.surfaceHover : Theme.surface)
     radius: Theme.radiusMedium
-    border.color: Theme.divider
+    border.color: isSelected ? Theme.primary : Theme.divider
+    border.width: isSelected ? 2 : 1
 
     property string taskTitle: ""
     property bool taskCompleted: false
@@ -17,6 +20,8 @@ Rectangle {
     property string taskSection: ""
     property bool isSectionCollapsed: taskListViewModel.isSectionCollapsed(taskSection)
     
+    property var taskTags: []
+
     signal toggled()
 
     property int taskIndex: -1
@@ -87,20 +92,53 @@ Rectangle {
             }
         }
 
-        // Title (Editable)
-        TextField {
-            id: titleField
+        // Title and Tags container
+        ColumnLayout {
             Layout.fillWidth: true
-            text: root.taskTitle
-            color: taskCompleted ? Theme.textMuted : Theme.textPrimary
-            font.pixelSize: 16
-            font.strikeout: taskCompleted
-            font.family: Theme.fontFamily
-            background: null // Transparent background
+            spacing: 2
             
-            onEditingFinished: {
-                if (text !== root.taskTitle && text.trim() !== "") {
-                    root.renamed(text)
+            // Title (Editable)
+            TextField {
+                id: titleField
+                Layout.fillWidth: true
+                text: root.taskTitle
+                color: taskCompleted ? Theme.textMuted : Theme.textPrimary
+                font.pixelSize: 16
+                font.strikeout: taskCompleted
+                font.family: Theme.fontFamily
+                background: null // Transparent background
+                padding: 0
+                
+                onEditingFinished: {
+                    if (text !== root.taskTitle && text.trim() !== "") {
+                        root.renamed(text)
+                    }
+                }
+            }
+            
+            // Tags Row
+            Row {
+                spacing: 5
+                visible: root.taskTags.length > 0
+                
+                Repeater {
+                    model: root.taskTags
+                    
+                    Rectangle {
+                        color: Theme.surfaceHover
+                        radius: Theme.radiusSmall
+                        height: 20
+                        width: tagText.width + 12
+                        
+                        Text {
+                            id: tagText
+                            anchors.centerIn: parent
+                            text: "#" + modelData
+                            color: Theme.textSecondary
+                            font.pixelSize: 11
+                            font.family: Theme.fontFamily
+                        }
+                    }
                 }
             }
         }
@@ -134,6 +172,7 @@ Rectangle {
         id: mouseArea
         anchors.fill: parent
         hoverEnabled: true
-        acceptedButtons: Qt.NoButton // Let the checkbox handle clicks
+        acceptedButtons: Qt.LeftButton
+        onClicked: taskListViewModel.selectTask(root.taskIndex)
     }
 }

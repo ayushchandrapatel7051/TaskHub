@@ -38,9 +38,21 @@ ApplicationWindow {
                 Layout.fillHeight: true
             }
             
-            TaskList {
+            StackLayout {
+                id: mainStack
                 Layout.fillWidth: true
                 Layout.fillHeight: true
+                currentIndex: taskListViewModel.activeFilterDate === "Calendar" ? 1 : 0
+                
+                TaskList {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
+                
+                CalendarView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                }
             }
             
             TaskDetail {

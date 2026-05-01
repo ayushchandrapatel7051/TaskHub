@@ -46,6 +46,7 @@ qt_add_resources(TaskHub qml_resources
         qml/components/TaskList.qml
         qml/components/TaskItem.qml
         qml/components/TaskDetail.qml
+        qml/components/CalendarView.qml
         qml/components/LoginScreen.qml
         resources/firebase_config.json
 )

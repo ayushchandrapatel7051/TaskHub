@@ -7,6 +7,9 @@ SyncService::SyncService(LocalCacheService* cacheService, FirestoreService* fire
     // Setup interval sync every 5 minutes
     m_syncTimer.setInterval(5 * 60 * 1000);
     connect(&m_syncTimer, &QTimer::timeout, this, &SyncService::performSync);
+    
+    connect(m_firestoreService, &FirestoreService::syncCompleted, this, &SyncService::onSyncCompleted);
+    connect(m_firestoreService, &FirestoreService::remoteTasksFetched, this, &SyncService::onRemoteTasksFetched);
 }
 
 void SyncService::startSync() {
@@ -25,7 +28,48 @@ void SyncService::performSync() {
     m_firestoreService->fetchRemoteTasks();
     
     // Step 2: Push local unsynced changes
-    // (Needs tracking 'synced' flag in SQLite)
-    QList<Task> allLocalTasks = m_cacheService->getAllTasks();
-    m_firestoreService->syncTasksUp(allLocalTasks);
+    QList<Task> dirtyTasks = m_cacheService->getDirtyTasks();
+    if (!dirtyTasks.isEmpty()) {
+        qDebug() << "SyncEngine: Pushing" << dirtyTasks.size() << "dirty tasks.";
+        m_firestoreService->syncTasksUp(dirtyTasks);
+    }
+}
+
+void SyncService::onSyncCompleted(bool success, const QStringList& syncedTaskIds) {
+    if (success) {
+        qDebug() << "SyncEngine: Batch push successful, clearing dirty flags for" << syncedTaskIds.size() << "tasks.";
+        for (const QString& id : syncedTaskIds) {
+            m_cacheService->clearDirtyFlag(id);
+        }
+    } else {
+        qWarning() << "SyncEngine: Batch push failed, keeping dirty flags.";
+    }
+}
+
+void SyncService::onRemoteTasksFetched(const QList<Task>& tasks) {
+    qDebug() << "SyncEngine: Fetched" << tasks.size() << "remote tasks. Resolving conflicts...";
+    
+    int savedCount = 0;
+    for (const Task& remoteTask : tasks) {
+        Task localTask = m_cacheService->getTask(remoteTask.id);
+        
+        if (localTask.id.isEmpty()) {
+            // Task does not exist locally, save it
+            m_cacheService->saveTask(remoteTask, false); // false = not dirty
+            savedCount++;
+        } else {
+            // Conflict handling: local wins if newer, or if local is dirty and timestamps are equal
+            if (localTask.updatedAt > remoteTask.updatedAt || (localTask.isDirty && localTask.updatedAt >= remoteTask.updatedAt)) {
+                // Local is newer or pending sync, ignore remote
+            } else if (localTask.updatedAt < remoteTask.updatedAt) {
+                // Remote is newer, update local
+                m_cacheService->saveTask(remoteTask, false); // false = not dirty
+                savedCount++;
+            }
+        }
+    }
+    
+    if (savedCount > 0) {
+        qDebug() << "SyncEngine: Applied" << savedCount << "remote updates to local cache.";
+    }
 }

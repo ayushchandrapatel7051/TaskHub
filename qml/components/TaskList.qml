@@ -10,14 +10,131 @@ Rectangle {
         anchors.fill: parent
         anchors.margins: 20
         spacing: 15
+        
+        Shortcut {
+            sequence: "Ctrl+K"
+            onActivated: searchInput.forceActiveFocus()
+        }
+        
+        Shortcut {
+            sequence: "Return"
+            onActivated: {
+                if (newTaskInput.activeFocus) {
+                    addTask()
+                }
+            }
+        }
 
-        // Header
-        Text {
-            text: "Inbox"
-            color: Theme.textPrimary
-            font.pixelSize: 28
-            font.bold: true
-            font.family: Theme.fontFamily
+        // Header Area
+        RowLayout {
+            Layout.fillWidth: true
+            
+            Text {
+                text: taskListViewModel.activeFilterDate === "" ? "Inbox" : taskListViewModel.activeFilterDate
+                color: Theme.textPrimary
+                font.pixelSize: 28
+                font.bold: true
+                font.family: Theme.fontFamily
+            }
+            
+            Item { Layout.fillWidth: true } // Spacer
+            
+            // Active Tag Filter Badge
+            Rectangle {
+                visible: taskListViewModel.activeFilterTag !== ""
+                height: 28
+                width: filterText.width + 30
+                radius: 14
+                color: Theme.primary + "33"
+                border.color: Theme.primary
+                border.width: 1
+                
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 5
+                    
+                    Text {
+                        id: filterText
+                        text: "Tagged: #" + taskListViewModel.activeFilterTag
+                        color: Theme.primary
+                        font.pixelSize: 13
+                        font.bold: true
+                        font.family: Theme.fontFamily
+                    }
+                    
+                    Text {
+                        text: "✕"
+                        color: Theme.primary
+                        font.pixelSize: 12
+                        font.bold: true
+                        
+                        MouseArea {
+                            anchors.fill: parent
+                            anchors.margins: -5
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: taskListViewModel.clearFilters()
+                        }
+                    }
+                }
+            }
+        }
+
+        // Search Bar
+        Rectangle {
+            Layout.fillWidth: true
+            height: 40
+            color: Theme.surface
+            radius: Theme.radiusMedium
+            border.color: searchInput.activeFocus ? Theme.primary : Theme.divider
+            
+            RowLayout {
+                anchors.fill: parent
+                anchors.margins: 10
+                
+                Text {
+                    text: "🔍"
+                    color: Theme.textMuted
+                    font.pixelSize: 14
+                }
+                
+                TextField {
+                    id: searchInput
+                    Layout.fillWidth: true
+                    placeholderText: "Search tasks..."
+                    color: Theme.textPrimary
+                    font.pixelSize: 14
+                    font.family: Theme.fontFamily
+                    background: null
+                    text: taskListViewModel.searchQuery
+                    
+                    Timer {
+                        id: debounceTimer
+                        interval: 300
+                        onTriggered: taskListViewModel.setSearchQuery(searchInput.text)
+                    }
+                    
+                    onTextEdited: debounceTimer.restart()
+                }
+                
+                Text {
+                    visible: searchInput.text !== ""
+                    text: "✕"
+                    color: Theme.textMuted
+                    font.pixelSize: 12
+                    font.bold: true
+                    
+                    MouseArea {
+                        anchors.fill: parent
+                        anchors.margins: -5
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            searchInput.text = ""
+                            taskListViewModel.setSearchQuery("")
+                        }
+                    }
+                }
+            }
         }
 
         // Quick Add Input
@@ -59,6 +176,16 @@ Rectangle {
             model: taskListViewModel
             clip: true
             spacing: 8
+            
+            add: Transition {
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutQuad }
+                NumberAnimation { property: "scale"; from: 0.8; to: 1; duration: 250; easing.type: Easing.OutBack }
+            }
+            
+            remove: Transition {
+                NumberAnimation { property: "opacity"; to: 0; duration: 200 }
+                NumberAnimation { property: "scale"; to: 0.8; duration: 200 }
+            }
             
             section.property: "section"
             section.delegate: Rectangle {
@@ -112,6 +239,7 @@ Rectangle {
                 taskCompleted: model.isCompleted
                 taskPriority: model.priority !== undefined ? model.priority : 0
                 taskSection: model.section
+                taskTags: model.tags !== undefined ? model.tags : []
                 
                 onToggled: taskListViewModel.toggleTaskCompletion(index)
                 onRenamed: function(newTitle) { taskListViewModel.renameTask(index, newTitle) }

@@ -29,6 +29,7 @@ QVariant TaskListViewModel::data(const QModelIndex &index, int role) const {
         case DueAtRole: return task.dueAt.isValid() ? task.dueAt.toString(Qt::ISODate) : QVariant();
         case IsPinnedRole: return task.isPinned;
         case SectionRole: return getTaskSection(task);
+        case TagsRole: return task.tags;
         default: return QVariant();
     }
 }
@@ -44,6 +45,7 @@ QHash<int, QByteArray> TaskListViewModel::roleNames() const {
     roles[DueAtRole] = "dueAt";
     roles[IsPinnedRole] = "isPinned";
     roles[SectionRole] = "section";
+    roles[TagsRole] = "tags";
     return roles;
 }
 
@@ -75,7 +77,35 @@ int TaskListViewModel::getTaskSectionOrder(const Task& task) {
 
 void TaskListViewModel::loadTasks() {
     beginResetModel();
-    m_tasks = m_taskService->getTasks();
+    QList<Task> allTasks = m_taskService->getTasks(m_searchQuery);
+    m_tasks.clear();
+    
+    QDate today = QDate::currentDate();
+    
+    // Apply filters
+    for (const Task& task : allTasks) {
+        // Tag Filter
+        if (!m_filterTag.isEmpty() && !task.tags.contains(m_filterTag, Qt::CaseInsensitive)) {
+            continue;
+        }
+        
+        // Priority Filter
+        if (m_filterPriority != -1 && task.priority != m_filterPriority) {
+            continue;
+        }
+        
+        // Date Filter (Inbox=All incomplete, Today=Today, Next 7 Days=<=7 days)
+        if (!m_filterDate.isEmpty() && m_filterDate != "Inbox") {
+            if (m_filterDate == "Today") {
+                if (!task.dueAt.isValid() || task.dueAt.date() != today) continue;
+            } else if (m_filterDate == "Next 7 Days") {
+                if (!task.dueAt.isValid() || task.dueAt.date() < today || task.dueAt.date() > today.addDays(7)) continue;
+            }
+            // Calendar could be handled differently if needed, skipping for now
+        }
+        
+        m_tasks.append(task);
+    }
     
     // Sort logic for sections
     std::sort(m_tasks.begin(), m_tasks.end(), [](const Task& a, const Task& b) {
@@ -101,6 +131,10 @@ void TaskListViewModel::loadTasks() {
         
         return a.createdAt < b.createdAt;
     });
+    
+    // Clear selection if list changes drastically, or keep it if possible (simplified for MVP: clear it)
+    m_selectedTaskIndex = -1;
+    emit selectedTaskChanged();
     
     endResetModel();
 }
@@ -174,4 +208,146 @@ bool TaskListViewModel::isSectionCollapsed(const QString& section) const {
 
 void TaskListViewModel::onTasksChanged() {
     loadTasks();
+}
+
+void TaskListViewModel::setSearchQuery(const QString& query) {
+    if (m_searchQuery != query) {
+        m_searchQuery = query;
+        emit filterChanged();
+        loadTasks();
+    }
+}
+
+void TaskListViewModel::setFilterTag(const QString& tag) {
+    if (m_filterTag != tag) {
+        m_filterTag = tag;
+        emit filterChanged();
+        loadTasks();
+    }
+}
+
+void TaskListViewModel::setFilterPriority(int priority) {
+    if (m_filterPriority != priority) {
+        m_filterPriority = priority;
+        emit filterChanged();
+        loadTasks();
+    }
+}
+
+void TaskListViewModel::setFilterDate(const QString& date) {
+    if (m_filterDate != date) {
+        m_filterDate = date;
+        m_filterTag = ""; // Optional: Clear tag filter when changing sidebar sections
+        emit filterChanged();
+        loadTasks();
+    }
+}
+
+void TaskListViewModel::clearFilters() {
+    m_searchQuery = "";
+    m_filterTag = "";
+    m_filterPriority = -1;
+    m_filterDate = "Inbox";
+    emit filterChanged();
+    loadTasks();
+}
+
+QStringList TaskListViewModel::getAllTags() const {
+    QSet<QString> uniqueTags;
+    QList<Task> allTasks = m_taskService->getTasks();
+    for (const Task& t : allTasks) {
+        if (!t.isCompleted && t.status != "trashed") {
+            for (const QString& tag : t.tags) {
+                uniqueTags.insert(tag.trimmed());
+            }
+        }
+    }
+    QStringList result = uniqueTags.values();
+    result.sort(Qt::CaseInsensitive);
+    return result;
+}
+
+// --- Task Detail Selection ---
+
+void TaskListViewModel::selectTask(int index) {
+    if (index >= 0 && index < m_tasks.size()) {
+        m_selectedTaskIndex = index;
+        emit selectedTaskChanged();
+    }
+}
+
+QString TaskListViewModel::selectedTaskTitle() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return m_tasks[m_selectedTaskIndex].title;
+    return "";
+}
+
+QString TaskListViewModel::selectedTaskDescription() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return m_tasks[m_selectedTaskIndex].description;
+    return "";
+}
+
+int TaskListViewModel::selectedTaskPriority() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return m_tasks[m_selectedTaskIndex].priority;
+    return 0;
+}
+
+QString TaskListViewModel::selectedTaskDueAt() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        const QDateTime& dt = m_tasks[m_selectedTaskIndex].dueAt;
+        if (dt.isValid()) return dt.toString(Qt::ISODate).left(10);
+    }
+    return "";
+}
+
+QStringList TaskListViewModel::selectedTaskTags() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return m_tasks[m_selectedTaskIndex].tags;
+    return QStringList();
+}
+
+void TaskListViewModel::updateSelectedTaskDescription(const QString& description) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task& task = m_tasks[m_selectedTaskIndex];
+        task.description = description;
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+    }
+}
+
+void TaskListViewModel::updateSelectedTaskPriority(int priority) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task& task = m_tasks[m_selectedTaskIndex];
+        task.priority = priority;
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+        emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
+    }
+}
+
+void TaskListViewModel::updateSelectedTaskTags(const QString& tagsString) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task& task = m_tasks[m_selectedTaskIndex];
+        task.tags = tagsString.split(",", Qt::SkipEmptyParts);
+        for(QString& tag : task.tags) tag = tag.trimmed();
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+        emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
+    }
+}
+
+void TaskListViewModel::updateSelectedTaskDueAt(const QString& dateStr) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task& task = m_tasks[m_selectedTaskIndex];
+        if (dateStr.isEmpty()) {
+            task.dueAt = QDateTime();
+        } else {
+            task.dueAt = QDateTime::fromString(dateStr, Qt::ISODate);
+        }
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+        emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
+    }
 }

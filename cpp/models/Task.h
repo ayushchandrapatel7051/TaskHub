@@ -24,6 +24,7 @@ public:
     int orderIndex; // For drag & drop reordering
     QDateTime createdAt;
     QDateTime updatedAt;
+    bool isDirty; // Used for Firebase sync tracking
     
     // Serialization for Local SQLite and Firebase
     static Task fromVariantMap(const QVariantMap& map);

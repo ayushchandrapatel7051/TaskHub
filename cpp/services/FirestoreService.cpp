@@ -11,49 +11,63 @@ FirestoreService::FirestoreService(AuthService* authService, const QString& proj
 }
 
 void FirestoreService::syncTasksUp(const QList<Task>& tasksToSync) {
-    if (!m_authService->isAuthenticated()) return;
+    if (!m_authService->isAuthenticated() || tasksToSync.isEmpty()) return;
 
-    // For simplicity in MVP, we patch documents individually
+    QString urlStr = QString("https://firestore.googleapis.com/v1/projects/%1/databases/(default)/documents:commit").arg(m_projectId);
+    QUrl url(urlStr);
+    QNetworkRequest request(url);
+    request.setRawHeader("Authorization", QString("Bearer %1").arg(m_authService->getIdToken()).toUtf8());
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+
+    QJsonObject commitJson;
+    QJsonArray writesArray;
+    QStringList taskIds;
+
     for (const Task& task : tasksToSync) {
-        QString urlStr = QString("https://firestore.googleapis.com/v1/projects/%1/databases/(default)/documents/tasks/%2?updateMask.fieldPaths=title&updateMask.fieldPaths=status")
-                             .arg(m_projectId, task.id);
+        taskIds.append(task.id);
         
-        QUrl url(urlStr);
-        QNetworkRequest request(url);
-        request.setRawHeader("Authorization", QString("Bearer %1").arg(m_authService->getIdToken()).toUtf8());
-        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
-
-        // Convert task to Firestore Document format
-        QJsonObject docJson;
+        QJsonObject writeObj;
+        QJsonObject updateObj;
+        updateObj["name"] = QString("projects/%1/databases/(default)/documents/tasks/%2").arg(m_projectId, task.id);
+        
         QJsonObject fields;
-        
         QJsonObject titleField; titleField["stringValue"] = task.title;
         fields["title"] = titleField;
         
         QJsonObject statusField; statusField["stringValue"] = task.status;
         fields["status"] = statusField;
         
-        docJson["fields"] = fields;
-        
-        QNetworkReply* reply = m_networkManager.sendCustomRequest(request, "PATCH", QJsonDocument(docJson).toJson());
-        connect(reply, &QNetworkReply::finished, this, [this, reply]() { onSyncReply(reply); });
+        updateObj["fields"] = fields;
+        writeObj["update"] = updateObj;
+        writesArray.append(writeObj);
     }
+    
+    commitJson["writes"] = writesArray;
+
+    QNetworkReply* reply = m_networkManager.post(request, QJsonDocument(commitJson).toJson());
+    connect(reply, &QNetworkReply::finished, this, [this, reply, taskIds]() { 
+        reply->deleteLater();
+        if (reply->error() == QNetworkReply::NoError) {
+            emit syncCompleted(true, taskIds);
+        } else {
+            qWarning() << "Sync Up Batch Error:" << reply->errorString();
+            emit syncCompleted(false, QStringList());
+        }
+    });
 }
 
 void FirestoreService::onSyncReply(QNetworkReply* reply) {
-    reply->deleteLater();
-    if (reply->error() == QNetworkReply::NoError) {
-        emit syncCompleted(true);
-    } else {
-        qWarning() << "Sync Up Error:" << reply->errorString();
-        emit syncCompleted(false);
-    }
+    // Deprecated, handled by lambda
 }
 
-void FirestoreService::fetchRemoteTasks() {
+void FirestoreService::fetchRemoteTasks(const QString& pageToken) {
     if (!m_authService->isAuthenticated()) return;
 
     QString urlStr = QString("https://firestore.googleapis.com/v1/projects/%1/databases/(default)/documents/tasks").arg(m_projectId);
+    if (!pageToken.isEmpty()) {
+        urlStr += "?pageToken=" + pageToken;
+    }
+    
     QUrl url(urlStr);
     QNetworkRequest request(url);
     request.setRawHeader("Authorization", QString("Bearer %1").arg(m_authService->getIdToken()).toUtf8());
@@ -83,6 +97,11 @@ void FirestoreService::onFetchReply(QNetworkReply* reply) {
             t.status = fields["status"].toObject()["stringValue"].toString();
             
             remoteTasks.append(t);
+        }
+        
+        QString nextPageToken = doc.object()["nextPageToken"].toString();
+        if (!nextPageToken.isEmpty()) {
+            fetchRemoteTasks(nextPageToken);
         }
     } else {
         qWarning() << "Fetch Remote Tasks Error:" << reply->errorString();

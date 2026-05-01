@@ -11,7 +11,7 @@ class TaskService : public QObject {
 public:
     explicit TaskService(LocalCacheService* cacheService, QObject *parent = nullptr);
 
-    Q_INVOKABLE QList<Task> getTasks();
+    Q_INVOKABLE QList<Task> getTasks(const QString& searchQuery = "");
     Q_INVOKABLE bool createTask(const QString& title, const QString& description);
     Q_INVOKABLE bool updateTaskStatus(const QString& taskId, const QString& status);
     Q_INVOKABLE bool deleteTask(const QString& taskId);

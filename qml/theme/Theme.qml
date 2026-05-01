@@ -26,6 +26,7 @@ QtObject {
     readonly property string fontFamily: "Inter, Roboto, sans-serif"
     
     // Spacing & Radii
+    readonly property int radiusSmall: 4
     readonly property int radiusMedium: 8
     readonly property int radiusLarge: 12
 }

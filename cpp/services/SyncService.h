@@ -16,6 +16,8 @@ public:
 
 private slots:
     void performSync();
+    void onSyncCompleted(bool success, const QStringList& syncedTaskIds);
+    void onRemoteTasksFetched(const QList<Task>& tasks);
 
 private:
     LocalCacheService* m_cacheService;
