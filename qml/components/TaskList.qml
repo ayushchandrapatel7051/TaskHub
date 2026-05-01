@@ -398,6 +398,7 @@ Rectangle {
             property bool expanded: false
             property int  selectedPriority: 0   // 0=None,1=Low,2=Med,3=High
             property string selectedDate: ""
+            property string selectedTags: ""   // Comma-separated tags
 
             // Priority colour helpers
             property var priorityColors: ["#475569", "#3b82f6", "#f59e0b", "#ef4444"]
@@ -406,10 +407,23 @@ Rectangle {
             function submit() {
                 var title = taskInput.text.trim()
                 if (title === "") return
-                taskListViewModel.addTask(title, "", addBar.selectedPriority, addBar.selectedDate)
+                
+                // Parse tags - split by comma and trim whitespace
+                var tags = []
+                if (addBar.selectedTags.trim() !== "") {
+                    var tagStr = addBar.selectedTags.split(",")
+                    for (var i = 0; i < tagStr.length; i++) {
+                        var tag = tagStr[i].trim()
+                        if (tag !== "") tags.push(tag)
+                    }
+                }
+                
+                taskListViewModel.addTask(title, "", addBar.selectedPriority, addBar.selectedDate, tags)
                 taskInput.text = ""
+                tagsInput.text = ""
                 addBar.selectedPriority = 0
                 addBar.selectedDate = ""
+                addBar.selectedTags = ""
                 addBar.expanded = false
             }
 
@@ -637,6 +651,40 @@ Rectangle {
                             }
 
                             Item { Layout.fillWidth: true }
+                        }
+
+                        // Tags input row
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 12
+                            Layout.rightMargin: 12
+                            spacing: 4
+
+                            Text {
+                                text: "#"
+                                color: Theme.textMuted
+                                font.pixelSize: 12
+                                font.bold: true
+                            }
+
+                            TextField {
+                                id: tagsInput
+                                Layout.fillWidth: true
+                                placeholderText: "Tags (comma-separated)"
+                                color: Theme.textPrimary
+                                font.pixelSize: 12
+                                font.family: Theme.fontFamily
+                                background: Rectangle {
+                                    color: Theme.background
+                                    radius: 4
+                                    border.color: Theme.divider
+                                    border.width: 1
+                                }
+                                padding: 6
+                                
+                                onTextChanged: addBar.selectedTags = text
+                                onAccepted: addBar.submit()
+                            }
                         }
 
                         // Second row: Cancel and Add buttons

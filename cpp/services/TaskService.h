@@ -12,7 +12,7 @@ public:
     explicit TaskService(LocalCacheService* cacheService, QObject *parent = nullptr);
 
     Q_INVOKABLE QList<Task> getTasks(const QString& searchQuery = "");
-    Q_INVOKABLE bool createTask(const QString& title, const QString& description, int priority = 0, const QString& dueAt = "");
+    Q_INVOKABLE bool createTask(const QString& title, const QString& description, int priority = 0, const QString& dueAt = "", const QStringList& tags = QStringList());
     Q_INVOKABLE bool updateTaskStatus(const QString& taskId, const QString& status);
     Q_INVOKABLE bool deleteTask(const QString& taskId);
     bool updateTask(const Task& task);

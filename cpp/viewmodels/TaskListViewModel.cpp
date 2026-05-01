@@ -139,8 +139,8 @@ void TaskListViewModel::loadTasks() {
     endResetModel();
 }
 
-void TaskListViewModel::addTask(const QString& title, const QString& description, int priority, const QString& dueAt) {
-    m_taskService->createTask(title, description, priority, dueAt);
+void TaskListViewModel::addTask(const QString& title, const QString& description, int priority, const QString& dueAt, const QStringList& tags) {
+    m_taskService->createTask(title, description, priority, dueAt, tags);
 }
 
 void TaskListViewModel::toggleTaskCompletion(int row) {
@@ -208,6 +208,7 @@ bool TaskListViewModel::isSectionCollapsed(const QString& section) const {
 
 void TaskListViewModel::onTasksChanged() {
     loadTasks();
+    emit tasksModified(); // Signal for sidebar and other UI elements
 }
 
 void TaskListViewModel::setSearchQuery(const QString& query) {
@@ -350,4 +351,56 @@ void TaskListViewModel::updateSelectedTaskDueAt(const QString& dateStr) {
         emit selectedTaskChanged();
         emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
     }
+}
+
+// Count methods for sidebar - count from ALL tasks regardless of current filter
+int TaskListViewModel::getTodayCount() const {
+    QDate today = QDate::currentDate();
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed" && task.dueAt.isValid()) {
+            if (task.dueAt.date() == today) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getNext7DaysCount() const {
+    QDate today = QDate::currentDate();
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed" && task.dueAt.isValid()) {
+            QDate dueDate = task.dueAt.date();
+            if (dueDate > today && dueDate <= today.addDays(7)) {
+                count++;
+            }
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getNoDateCount() const {
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed" && !task.dueAt.isValid()) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getAllTaskCount() const {
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed") {
+            count++;
+        }
+    }
+    return count;
 }

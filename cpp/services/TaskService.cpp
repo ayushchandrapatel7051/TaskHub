@@ -9,11 +9,12 @@ QList<Task> TaskService::getTasks(const QString& searchQuery) {
     return m_cacheService->getAllTasks(searchQuery);
 }
 
-bool TaskService::createTask(const QString& title, const QString& description, int priority, const QString& dueAt) {
+bool TaskService::createTask(const QString& title, const QString& description, int priority, const QString& dueAt, const QStringList& tags) {
     Task task;
     task.title = title;
     task.description = description;
     task.priority = priority;
+    task.tags = tags;
     if (!dueAt.isEmpty()) {
         task.dueAt = QDateTime::fromString(dueAt, Qt::ISODate);
         if (!task.dueAt.isValid()) {

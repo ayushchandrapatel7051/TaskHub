@@ -28,7 +28,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     Q_INVOKABLE void loadTasks();
-    Q_INVOKABLE void addTask(const QString& title, const QString& description, int priority = 0, const QString& dueAt = "");
+    Q_INVOKABLE void addTask(const QString& title, const QString& description, int priority = 0, const QString& dueAt = "", const QStringList& tags = QStringList());
     Q_INVOKABLE void toggleTaskCompletion(int row);
     Q_INVOKABLE void renameTask(int row, const QString& newTitle);
     Q_INVOKABLE void softDeleteTask(int row);
@@ -45,6 +45,12 @@ public:
     Q_INVOKABLE void setFilterDate(const QString& date);
     Q_INVOKABLE void clearFilters();
     Q_INVOKABLE QStringList getAllTags() const;
+    
+    // Count methods for sidebar
+    Q_INVOKABLE int getTodayCount() const;
+    Q_INVOKABLE int getNext7DaysCount() const;
+    Q_INVOKABLE int getNoDateCount() const;
+    Q_INVOKABLE int getAllTaskCount() const;
     
     Q_PROPERTY(QString activeFilterTag READ activeFilterTag NOTIFY filterChanged)
     Q_PROPERTY(QString activeFilterDate READ activeFilterDate NOTIFY filterChanged)
@@ -79,6 +85,7 @@ signals:
     void sectionToggled(); // Emitted when a section is collapsed/expanded
     void filterChanged(); // Emitted when a filter changes
     void selectedTaskChanged();
+    void tasksModified(); // Emitted when tasks are added/deleted/modified
 
 private slots:
     void onTasksChanged();
@@ -95,7 +102,7 @@ private:
     QString m_searchQuery;
     QString m_filterTag;
     int m_filterPriority = -1;
-    QString m_filterDate; // e.g., "Inbox", "Today", "Next 7 Days"
+    QString m_filterDate = "Inbox"; // Default to showing all incomplete tasks
     
     int m_selectedTaskIndex = -1;
 };
