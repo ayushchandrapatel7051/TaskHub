@@ -13,9 +13,12 @@ public:
 
     void startSync();
     void stopSync();
+    Q_INVOKABLE void performSync();
+
+signals:
+    void tasksChanged();
 
 private slots:
-    void performSync();
     void onSyncCompleted(bool success, const QStringList& syncedTaskIds);
     void onRemoteTasksFetched(const QList<Task>& tasks);
 

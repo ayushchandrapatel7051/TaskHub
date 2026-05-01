@@ -23,6 +23,15 @@ public:
     QList<Task> getDirtyTasks();
     Task getTask(const QString& taskId);
     void clearDirtyFlag(const QString& taskId);
+    QStringList getAllLists();
+    QStringList getRootLists();
+    QStringList getListsForFolder(const QString& folderName);
+    bool saveList(const QString& listName, const QString& color = QString(), const QString& folderName = QString(), const QString& listType = QStringLiteral("Task List"));
+    QStringList getAllFolders();
+    bool saveFolder(const QString& folderName);
+    QStringList getAllTags();
+    bool saveTag(const QString& tagName, const QString& color = QString(), const QString& parentTag = QString());
+    QString getTagColor(const QString& tagName);
 
 private:
     QSqlDatabase m_db;

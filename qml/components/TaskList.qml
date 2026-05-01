@@ -4,7 +4,38 @@ import QtQuick.Layouts
 import "../theme"
 
 Rectangle {
+    id: root
     color: Theme.background
+
+    function openPopupNear(popup, anchorItem, alignRight) {
+        if (!Overlay.overlay || !anchorItem) return
+
+        popup.close()
+
+        var margin = 12
+        var gap = 8
+        var anchorPos = anchorItem.mapToItem(Overlay.overlay, 0, 0)
+        var rootPos = root.mapToItem(Overlay.overlay, 0, 0)
+        var leftBound = Math.max(margin, rootPos.x + margin)
+        var rightBound = Math.min(Overlay.overlay.width - margin, rootPos.x + root.width - margin)
+        var popupHeight = popup.implicitHeight > 0 ? popup.implicitHeight : popup.height
+        var preferredX = alignRight ? anchorPos.x + anchorItem.width - popup.width : anchorPos.x
+        var belowY = anchorPos.y + anchorItem.height + gap
+        var spaceBelow = Overlay.overlay.height - belowY - margin
+        var spaceAbove = anchorPos.y - margin
+
+        popup.x = Math.max(leftBound, Math.min(preferredX, rightBound - popup.width))
+        popup.y = spaceBelow < popupHeight && spaceAbove > spaceBelow
+                ? Math.max(margin, anchorPos.y - popupHeight - gap)
+                : Math.min(belowY, Overlay.overlay.height - popupHeight - margin)
+        popup.open()
+    }
+
+    function openAddOptionsPopup(anchorItem) {
+        datePicker.close()
+        priorityPicker.close()
+        openPopupNear(addOptionsPopup, anchorItem, true)
+    }
 
     // ── Priority picker popup ──────────────────────────────────────────
     Popup {
@@ -50,11 +81,13 @@ Rectangle {
                         anchors.centerIn: parent
                         spacing: 2
 
-                        Text {
+                        SidebarIcon {
                             Layout.alignment: Qt.AlignHCenter
-                            text: "⚑"
-                            color: modelData.color
-                            font.pixelSize: 14
+                            Layout.preferredWidth: 14
+                            Layout.preferredHeight: 14
+                            iconName: "flag"
+                            iconColor: modelData.color
+                            strokeWidth: 1.8
                         }
                         Text {
                             Layout.alignment: Qt.AlignHCenter
@@ -91,9 +124,9 @@ Rectangle {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         background: Rectangle {
-            color: "#1e1e2e"
-            radius: Theme.radiusMedium
-            border.color: Theme.divider
+            color: "#242424"
+            radius: 10
+            border.color: "#3a3a3a"
             border.width: 1
         }
 
@@ -101,6 +134,52 @@ Rectangle {
             anchors.fill: parent
             anchors.margins: 12
             spacing: 12
+
+            Rectangle {
+                Layout.fillWidth: true
+                height: 30
+                radius: 7
+                color: "#303030"
+
+                RowLayout {
+                    anchors.fill: parent
+                    anchors.margins: 3
+                    spacing: 3
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        color: "#3a3a3a"
+                        Text { anchors.centerIn: parent; text: "Date"; color: "#f2f2f2"; font.pixelSize: 12; font.family: Theme.fontFamily }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
+                        radius: 6
+                        color: "transparent"
+                        Text { anchors.centerIn: parent; text: "Duration"; color: "#a8a8a8"; font.pixelSize: 12; font.family: Theme.fontFamily }
+                    }
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 18
+
+                Repeater {
+                    model: ["☼", "♨", "+7", "☾"]
+                    Text {
+                        Layout.fillWidth: true
+                        text: modelData
+                        color: "#bdbdbd"
+                        horizontalAlignment: Text.AlignHCenter
+                        font.pixelSize: 18
+                        font.family: Theme.fontFamily
+                    }
+                }
+            }
 
             // Current month/year and navigation
             RowLayout {
@@ -319,6 +398,169 @@ Rectangle {
         }
     }
 
+    Popup {
+        id: addOptionsPopup
+        parent: Overlay.overlay
+        modal: false
+        width: 280
+        height: addOptionsContent.implicitHeight + 28
+        padding: 0
+        z: 1002
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#242424"
+            radius: 10
+            border.color: "#3a3a3a"
+            border.width: 1
+        }
+
+        ColumnLayout {
+            id: addOptionsContent
+            x: 14
+            y: 14
+            width: addOptionsPopup.width - 28
+            spacing: 12
+
+            Text {
+                text: "Priority"
+                color: "#858585"
+                font.pixelSize: 11
+                font.family: Theme.fontFamily
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 8
+
+                Repeater {
+                    model: [
+                        { value: 3, color: "#ef4444", iconName: "flag" },
+                        { value: 2, color: "#f59e0b", iconName: "flag" },
+                        { value: 1, color: "#4b6fff", iconName: "flag" },
+                        { value: 0, color: "#c7c7c7", iconName: "flag-empty" }
+                    ]
+
+                    Rectangle {
+                        Layout.preferredWidth: 42
+                        height: 34
+                        radius: 7
+                        color: addBar.selectedPriority === modelData.value ? modelData.color + "33" : "#2d2d2d"
+
+                        SidebarIcon {
+                            anchors.centerIn: parent
+                            width: 18
+                            height: 18
+                            iconName: modelData.iconName
+                            iconColor: modelData.color
+                            strokeWidth: 1.9
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: addBar.selectedPriority = modelData.value
+                        }
+                    }
+                }
+            }
+
+            Rectangle { Layout.fillWidth: true; height: 1; color: "#333333" }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                SidebarIcon {
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    iconName: addBar.selectedList === "Inbox" ? "inbox" : "list"
+                    iconColor: "#dcdcdc"
+                    strokeWidth: 1.7
+                }
+                ComboBox {
+                    id: addListCombo
+                    Layout.fillWidth: true
+                    model: taskListViewModel.getAllLists()
+                    currentIndex: Math.max(0, taskListViewModel.getAllLists().indexOf(addBar.selectedList))
+                    onActivated: addBar.selectedList = currentText
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                SidebarIcon {
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    iconName: "tag"
+                    iconColor: "#dcdcdc"
+                    strokeWidth: 1.6
+                }
+                TextField {
+                    Layout.fillWidth: true
+                    text: addBar.selectedTags
+                    placeholderText: "Tags"
+                    color: "#f1f1f1"
+                    placeholderTextColor: "#777777"
+                    font.pixelSize: 13
+                    font.family: Theme.fontFamily
+                    background: Rectangle { color: "#1c1c1c"; radius: 6; border.color: "#363636"; border.width: 1 }
+                    onTextChanged: addBar.selectedTags = text
+                }
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+                SidebarIcon {
+                    Layout.preferredWidth: 16
+                    Layout.preferredHeight: 16
+                    iconName: "subtasks"
+                    iconColor: "#dcdcdc"
+                    strokeWidth: 1.5
+                }
+                TextField {
+                    Layout.fillWidth: true
+                    text: addBar.selectedSubtasks
+                    placeholderText: "Subtasks, comma-separated"
+                    color: "#f1f1f1"
+                    placeholderTextColor: "#777777"
+                    font.pixelSize: 13
+                    font.family: Theme.fontFamily
+                    background: Rectangle { color: "#1c1c1c"; radius: 6; border.color: "#363636"; border.width: 1 }
+                    onTextChanged: addBar.selectedSubtasks = text
+                }
+            }
+
+            Repeater {
+                model: [
+                    { iconName: "attachment", label: "Attachment" },
+                    { iconName: "template", label: "Add from Template" },
+                    { iconName: "settings", label: "Input Box Setting" }
+                ]
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 10
+                    SidebarIcon {
+                        Layout.preferredWidth: 16
+                        Layout.preferredHeight: 16
+                        iconName: modelData.iconName
+                        iconColor: "#dcdcdc"
+                        strokeWidth: 1.5
+                    }
+                    Text {
+                        text: modelData.label
+                        color: "#bdbdbd"
+                        font.pixelSize: 13
+                        font.family: Theme.fontFamily
+                        Layout.fillWidth: true
+                    }
+                }
+            }
+        }
+    }
+
     // ── Main layout ────────────────────────────────────────────────────
     ColumnLayout {
         anchors.fill: parent
@@ -338,9 +580,11 @@ Rectangle {
             Layout.fillWidth: true
 
             Text {
-                text: taskListViewModel.activeFilterDate === "" ? "Inbox" : taskListViewModel.activeFilterDate
+                text: taskListViewModel.activeFilterList !== ""
+                      ? taskListViewModel.activeFilterList
+                      : (taskListViewModel.activeFilterDate === "" ? "All" : taskListViewModel.activeFilterDate)
                 color: Theme.textPrimary
-                font.pixelSize: 34
+                font.pixelSize: 26
                 font.bold: true
                 font.family: Theme.fontFamily
             }
@@ -399,10 +643,21 @@ Rectangle {
             property int  selectedPriority: 0   // 0=None,1=Low,2=Med,3=High
             property string selectedDate: ""
             property string selectedTags: ""   // Comma-separated tags
+            property string selectedList: taskListViewModel.activeFilterList !== "" ? taskListViewModel.activeFilterList : "Inbox"
+            property string selectedSubtasks: ""
 
             // Priority colour helpers
             property var priorityColors: ["#475569", "#3b82f6", "#f59e0b", "#ef4444"]
             property var priorityLabels: ["",         "Low",     "Med",     "High"]
+
+            Connections {
+                target: taskListViewModel
+                function onFilterChanged() {
+                    if (!addBar.expanded) {
+                        addBar.selectedList = taskListViewModel.activeFilterList !== "" ? taskListViewModel.activeFilterList : "Inbox"
+                    }
+                }
+            }
 
             function submit() {
                 var title = taskInput.text.trim()
@@ -418,12 +673,23 @@ Rectangle {
                     }
                 }
                 
-                taskListViewModel.addTask(title, "", addBar.selectedPriority, addBar.selectedDate, tags)
+                var details = ""
+                if (addBar.selectedSubtasks.trim() !== "") {
+                    var subtasks = addBar.selectedSubtasks.split(",")
+                    for (var s = 0; s < subtasks.length; s++) {
+                        var subtask = subtasks[s].trim()
+                        if (subtask !== "") details += "- [ ] " + subtask + "\n"
+                    }
+                }
+                
+                taskListViewModel.addTask(title, details.trim(), addBar.selectedPriority, addBar.selectedDate, tags, addBar.selectedList)
                 taskInput.text = ""
                 tagsInput.text = ""
                 addBar.selectedPriority = 0
                 addBar.selectedDate = ""
                 addBar.selectedTags = ""
+                addBar.selectedSubtasks = ""
+                addBar.selectedList = taskListViewModel.activeFilterList !== "" ? taskListViewModel.activeFilterList : "Inbox"
                 addBar.expanded = false
             }
 
@@ -459,7 +725,7 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Add task to \"Inbox\""
+                        text: addBar.selectedList === "Inbox" ? "Add task" : "Add task to \"" + addBar.selectedList + "\""
                         color: Theme.textMuted
                         font.pixelSize: 14
                         font.family: Theme.fontFamily
@@ -467,16 +733,71 @@ Rectangle {
 
                         Behavior on color { ColorAnimation { duration: 120 } }
                     }
+
+                    Rectangle {
+                        width: 28
+                        height: 28
+                        radius: 6
+                        color: dateCollapsedMouse.containsMouse ? "#2f2f2f" : "transparent"
+
+                        SidebarIcon {
+                            anchors.centerIn: parent
+                            width: 15
+                            height: 15
+                            iconName: "calendar"
+                            iconColor: addBar.selectedDate === "" ? "#858585" : Theme.primary
+                            strokeWidth: 1.6
+                        }
+
+                        MouseArea {
+                            id: dateCollapsedMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var pos = parent.mapToItem(Overlay.overlay, 0, 0)
+                                datePicker.x = Math.max(12, Math.min(pos.x - datePicker.width + parent.width, Overlay.overlay.width - datePicker.width - 12))
+                                datePicker.y = pos.y + parent.height + 8
+                                datePicker.open()
+                            }
+                        }
+                    }
+
+                    Rectangle {
+                        width: 28
+                        height: 28
+                        radius: 6
+                        color: optionsCollapsedMouse.containsMouse ? "#2f2f2f" : "transparent"
+
+                        SidebarIcon {
+                            anchors.centerIn: parent
+                            width: 14
+                            height: 14
+                            iconName: "chevronDown"
+                            iconColor: "#b8b8b8"
+                            strokeWidth: 1.8
+                        }
+
+                        MouseArea {
+                            id: optionsCollapsedMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                openAddOptionsPopup(parent)
+                            }
+                        }
+                    }
                 }
 
                 HoverHandler { id: collapsedHover }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        addBar.expanded = true
-                        taskInput.forceActiveFocus()
+                TapHandler {
+                    onTapped: {
+                        if (!dateCollapsedMouse.containsMouse && !optionsCollapsedMouse.containsMouse) {
+                            addBar.expanded = true
+                            taskInput.forceActiveFocus()
+                        }
                     }
                 }
             }
@@ -565,9 +886,12 @@ Rectangle {
                                     anchors.rightMargin: 8
                                     spacing: 4
 
-                                    Text {
-                                        text: "📅"
-                                        font.pixelSize: 12
+                                    SidebarIcon {
+                                        Layout.preferredWidth: 13
+                                        Layout.preferredHeight: 13
+                                        iconName: "calendar"
+                                        iconColor: addBar.selectedDate !== "" ? Theme.primary : Theme.textMuted
+                                        strokeWidth: 1.5
                                     }
                                     Text {
                                         text: addBar.selectedDate !== "" ? addBar.selectedDate : "Date"
@@ -614,10 +938,12 @@ Rectangle {
                                     anchors.rightMargin: 8
                                     spacing: 4
 
-                                    Text {
-                                        text: "⚑"
-                                        color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : Theme.textMuted
-                                        font.pixelSize: 12
+                                    SidebarIcon {
+                                        Layout.preferredWidth: 13
+                                        Layout.preferredHeight: 13
+                                        iconName: addBar.selectedPriority > 0 ? "flag" : "flag-empty"
+                                        iconColor: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : Theme.textMuted
+                                        strokeWidth: 1.5
                                     }
                                     Text {
                                         visible: addBar.selectedPriority > 0
@@ -692,64 +1018,91 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 6
 
-                        // Cancel button
-                        Rectangle {
-                            height: 28
-                            width: 64
-                            radius: Theme.radiusSmall
-                            color: cancelHover.containsMouse ? Theme.surfaceHover : "transparent"
+                            Item { Layout.fillWidth: true }
 
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Cancel"
-                                color: Theme.textSecondary
-                                font.pixelSize: 12
-                                font.family: Theme.fontFamily
+                            Rectangle {
+                                height: 28
+                                width: 82
+                                radius: Theme.radiusSmall
+                                color: optionsExpandedHover.containsMouse ? Theme.surfaceHover : "transparent"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Options"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 12
+                                    font.family: Theme.fontFamily
+                                }
+
+                                HoverHandler { id: optionsExpandedHover }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        openAddOptionsPopup(parent)
+                                    }
+                                }
                             }
 
-                            HoverHandler { id: cancelHover }
+                            // Cancel button
+                            Rectangle {
+                                height: 28
+                                width: 64
+                                radius: Theme.radiusSmall
+                                color: cancelHover.containsMouse ? Theme.surfaceHover : "transparent"
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    taskInput.text = ""
-                                    addBar.expanded = false
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Cancel"
+                                    color: Theme.textSecondary
+                                    font.pixelSize: 12
+                                    font.family: Theme.fontFamily
+                                }
+
+                                HoverHandler { id: cancelHover }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        taskInput.text = ""
+                                        addBar.expanded = false
+                                    }
+                                }
+                            }
+
+                            // Add button
+                            Rectangle {
+                                id: addButton
+                                height: 28
+                                width: 64
+                                radius: Theme.radiusSmall
+                                color: taskInput.text.trim() !== ""
+                                       ? (addBtnHover.containsMouse ? Theme.primaryHover : Theme.primary)
+                                       : Theme.surface
+                                opacity: taskInput.text.trim() !== "" ? 1.0 : 0.5
+
+                                Behavior on color { ColorAnimation { duration: 120 } }
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Add"
+                                    color: taskInput.text.trim() !== "" ? "white" : Theme.textMuted
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: Theme.fontFamily
+                                }
+
+                                HoverHandler { id: addBtnHover }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: taskInput.text.trim() !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    onClicked: addBar.submit()
                                 }
                             }
                         }
-
-                        // Add button
-                        Rectangle {
-                            id: addButton
-                            height: 28
-                            width: 64
-                            radius: Theme.radiusSmall
-                            color: taskInput.text.trim() !== ""
-                                   ? (addBtnHover.containsMouse ? Theme.primaryHover : Theme.primary)
-                                   : Theme.surface
-                            opacity: taskInput.text.trim() !== "" ? 1.0 : 0.5
-
-                            Behavior on color { ColorAnimation { duration: 120 } }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: "Add"
-                                color: taskInput.text.trim() !== "" ? "white" : Theme.textMuted
-                                font.pixelSize: 12
-                                font.bold: true
-                                font.family: Theme.fontFamily
-                            }
-
-                            HoverHandler { id: addBtnHover }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: taskInput.text.trim() !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor
-                                onClicked: addBar.submit()
-                            }
-                        }
-                    }
                     }
                 }
             }

@@ -5,30 +5,33 @@ import "../theme"
 
 Rectangle {
     id: root
-    height: visible ? 48 : 0
+    height: visible ? 40 : 0
     visible: !isSectionCollapsed
-    property bool isSelected: root.taskIndex === taskListViewModel.selectedTaskIndex
-    
-    color: isSelected ? "#22262d" : (mouseArea.containsMouse ? "#1b1f25" : "transparent")
-    radius: Theme.radiusMedium
-    border.color: "transparent"
-    border.width: 0
 
+    property bool isSelected: root.taskIndex === taskListViewModel.selectedTaskIndex
     property string taskTitle: ""
     property bool taskCompleted: false
     property int taskPriority: 0
     property string taskSection: ""
     property bool isSectionCollapsed: taskListViewModel.isSectionCollapsed(taskSection)
-    
     property var taskTags: []
+    property int taskIndex: -1
 
     signal toggled()
-
-    property int taskIndex: -1
     signal renamed(string newTitle)
     signal deleted()
-    
-    // Listen for section toggles to show/hide items
+
+    color: isSelected ? "#242424" : (rowHover.hovered ? "#1f1f1f" : "transparent")
+    radius: 0
+    opacity: taskCompleted ? 0.58 : 1.0
+
+    HoverHandler { id: rowHover }
+
+    TapHandler {
+        acceptedButtons: Qt.LeftButton
+        onTapped: taskListViewModel.selectTask(root.taskIndex)
+    }
+
     Connections {
         target: taskListViewModel
         function onSectionToggled() {
@@ -36,128 +39,121 @@ Rectangle {
         }
     }
 
-    // Smooth hover transition
-    Behavior on color {
-        ColorAnimation { duration: 150 }
+    Rectangle {
+        anchors.left: parent.left
+        anchors.right: parent.right
+        anchors.bottom: parent.bottom
+        height: 1
+        color: "#252525"
+        visible: root.visible
     }
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
+        anchors.leftMargin: 12
+        anchors.rightMargin: 10
+        spacing: 8
         visible: root.visible
 
-        // Drag Handle (Placeholder for Drag logic)
-        Text {
-            text: "⋮⋮"
-            color: mouseArea.containsMouse ? Theme.textMuted : "transparent"
-            font.pixelSize: 18
-            font.bold: true
-        }
-
-        // Priority Indicator
         Rectangle {
-            width: 3
-            height: parent.height - 8
-            radius: 1
+            Layout.preferredWidth: 3
+            Layout.preferredHeight: 22
+            radius: 2
             color: {
+                if (taskCompleted) return "transparent"
                 if (taskPriority === 3) return Theme.accentRed
                 if (taskPriority === 2) return Theme.accentYellow
-                if (taskPriority === 1) return Theme.accentBlue
+                if (taskPriority === 1) return Theme.primary
                 return "transparent"
             }
         }
 
-        // Checkbox
         Rectangle {
-            width: 16
-            height: 16
+            Layout.preferredWidth: 15
+            Layout.preferredHeight: 15
             radius: 4
-            border.color: taskCompleted ? Theme.primary : Theme.textMuted
-            border.width: 2
+            border.color: taskCompleted ? Theme.primary : "#7a7f89"
+            border.width: 1.4
             color: taskCompleted ? Theme.primary : "transparent"
-            
-            // Checkmark icon placeholder
+
             Text {
                 anchors.centerIn: parent
                 text: "✓"
                 color: "white"
                 visible: taskCompleted
                 font.pixelSize: 10
+                font.bold: true
             }
-            
+
             MouseArea {
                 anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
                 onClicked: root.toggled()
             }
         }
 
-        // Title and Tags container
-        ColumnLayout {
+        TextField {
+            id: titleField
             Layout.fillWidth: true
-            spacing: 2
-            
-            // Title (Editable)
-            TextField {
-                id: titleField
-                Layout.fillWidth: true
-                text: root.taskTitle
-                color: taskCompleted ? Theme.textMuted : Theme.textPrimary
-                font.pixelSize: 16
-                font.strikeout: taskCompleted
-                font.family: Theme.fontFamily
-                background: null // Transparent background
-                padding: 0
-                
-                onEditingFinished: {
-                    if (text !== root.taskTitle && text.trim() !== "") {
-                        root.renamed(text)
-                    }
+            text: root.taskTitle
+            color: taskCompleted ? "#8a8f99" : Theme.textPrimary
+            font.pixelSize: 14
+            font.strikeout: taskCompleted
+            font.family: Theme.fontFamily
+            background: null
+            padding: 0
+            selectByMouse: true
+
+            onEditingFinished: {
+                if (text !== root.taskTitle && text.trim() !== "") {
+                    root.renamed(text)
                 }
             }
-            
-            // Tags Row
-            Row {
-                spacing: 5
-                visible: root.taskTags.length > 0
-                
-                Repeater {
-                    model: root.taskTags
-                    
-                    Rectangle {
-                        color: Theme.surfaceHover
-                        radius: Theme.radiusSmall
-                        height: 18
-                        width: tagText.width + 12
-                        
-                        Text {
-                            id: tagText
-                            anchors.centerIn: parent
-                            text: "#" + modelData
-                            color: Theme.textSecondary
-                            font.pixelSize: 11
-                            font.family: Theme.fontFamily
-                        }
+        }
+
+        Row {
+            spacing: 6
+            visible: root.taskTags.length > 0
+            Layout.maximumWidth: 260
+            clip: true
+
+            Repeater {
+                model: root.taskTags
+
+                Rectangle {
+                    height: 20
+                    width: tagText.width + 12
+                    radius: 10
+                    color: "#75435a"
+
+                    Text {
+                        id: tagText
+                        anchors.centerIn: parent
+                        text: modelData
+                        color: "#f0cedc"
+                        font.pixelSize: 11
+                        font.family: Theme.fontFamily
                     }
                 }
             }
         }
 
-        // Delete Button
         Rectangle {
-            width: 30
-            height: 30
-            radius: 15
-            color: deleteMouseArea.containsMouse ? Theme.accentRed : "transparent"
-            visible: mouseArea.containsMouse
-            
-            Text {
+            width: 26
+            height: 26
+            radius: 6
+            color: deleteMouseArea.containsMouse ? "#3a2323" : "transparent"
+            visible: rowHover.hovered
+
+            SidebarIcon {
                 anchors.centerIn: parent
-                text: "🗑" // Trash icon
-                color: deleteMouseArea.containsMouse ? "white" : Theme.accentRed
-                font.pixelSize: 16
+                width: 15
+                height: 15
+                iconName: "trash"
+                iconColor: deleteMouseArea.containsMouse ? Theme.accentRed : "#8b8f98"
+                strokeWidth: 1.5
             }
-            
+
             MouseArea {
                 id: deleteMouseArea
                 anchors.fill: parent
@@ -166,13 +162,5 @@ Rectangle {
                 onClicked: root.deleted()
             }
         }
-    }
-
-    MouseArea {
-        id: mouseArea
-        anchors.fill: parent
-        hoverEnabled: true
-        acceptedButtons: Qt.LeftButton
-        onClicked: taskListViewModel.selectTask(root.taskIndex)
     }
 }

@@ -4,6 +4,7 @@
 #include <QStandardPaths>
 #include <QDir>
 #include <QDebug>
+#include <QSet>
 
 LocalCacheService::LocalCacheService(QObject *parent) : QObject(parent) {
     initializeDB();
@@ -55,10 +56,41 @@ void LocalCacheService::createTables() {
                "createdAt TEXT, "
                "updatedAt TEXT, "
                "isDirty INTEGER DEFAULT 1)");
+
+    query.exec("CREATE TABLE IF NOT EXISTS lists ("
+               "name TEXT PRIMARY KEY, "
+               "color TEXT, "
+               "folderName TEXT, "
+               "listType TEXT, "
+               "createdAt TEXT)");
+
+    query.exec("CREATE TABLE IF NOT EXISTS tags ("
+               "name TEXT PRIMARY KEY, "
+               "color TEXT, "
+               "parentTag TEXT, "
+               "createdAt TEXT)");
+
+    query.exec("CREATE TABLE IF NOT EXISTS folders ("
+               "name TEXT PRIMARY KEY, "
+               "createdAt TEXT)");
                
     // Migrations
     query.exec("ALTER TABLE tasks ADD COLUMN orderIndex INTEGER DEFAULT 0");
     query.exec("ALTER TABLE tasks ADD COLUMN isDirty INTEGER DEFAULT 1");
+    query.exec("ALTER TABLE lists ADD COLUMN color TEXT");
+    query.exec("ALTER TABLE lists ADD COLUMN folderName TEXT");
+    query.exec("ALTER TABLE lists ADD COLUMN listType TEXT");
+    query.exec("UPDATE tasks SET isDirty = 1 WHERE status = 'trashed' AND isDirty = 0");
+
+    QSqlQuery listQuery(m_db);
+    listQuery.prepare("INSERT OR IGNORE INTO lists (name, color, folderName, listType, createdAt) "
+                      "VALUES (:name, :color, :folderName, :listType, :createdAt)");
+    listQuery.bindValue(":name", "Inbox");
+    listQuery.bindValue(":color", "");
+    listQuery.bindValue(":folderName", "");
+    listQuery.bindValue(":listType", "Task List");
+    listQuery.bindValue(":createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+    listQuery.exec();
 }
 
 QList<Task> LocalCacheService::getDirtyTasks() {
@@ -233,4 +265,170 @@ Task LocalCacheService::getTask(const QString& taskId) {
     }
     qDebug() << "[LocalCacheService] getTask COULD NOT FIND ID:" << taskId;
     return Task();
+}
+
+QStringList LocalCacheService::getAllLists() {
+    QSet<QString> names;
+    names.insert("Inbox");
+
+    QSqlQuery query("SELECT name FROM lists", m_db);
+    while (query.next()) {
+        QString name = query.value("name").toString().trimmed();
+        if (!name.isEmpty()) {
+            names.insert(name);
+        }
+    }
+
+    QSqlQuery taskQuery("SELECT DISTINCT listId FROM tasks WHERE status != 'trashed'", m_db);
+    while (taskQuery.next()) {
+        QString name = taskQuery.value("listId").toString().trimmed();
+        names.insert(name.isEmpty() ? "Inbox" : name);
+    }
+
+    QStringList result = names.values();
+    result.sort(Qt::CaseInsensitive);
+    result.removeAll("Inbox");
+    result.prepend("Inbox");
+    return result;
+}
+
+QStringList LocalCacheService::getRootLists() {
+    QSet<QString> assigned;
+    QSqlQuery assignedQuery("SELECT name FROM lists WHERE trim(coalesce(folderName, '')) != ''", m_db);
+    while (assignedQuery.next()) {
+        assigned.insert(assignedQuery.value("name").toString().trimmed());
+    }
+
+    QStringList result;
+    const QStringList allLists = getAllLists();
+    for (const QString& name : allLists) {
+        if (name != "Inbox" && !assigned.contains(name)) {
+            result.append(name);
+        }
+    }
+    result.sort(Qt::CaseInsensitive);
+    return result;
+}
+
+QStringList LocalCacheService::getListsForFolder(const QString& folderName) {
+    QStringList result;
+    QSqlQuery query(m_db);
+    query.prepare("SELECT name FROM lists WHERE folderName = :folderName AND name != 'Inbox' ORDER BY lower(name)");
+    query.bindValue(":folderName", folderName.trimmed());
+    if (query.exec()) {
+        while (query.next()) {
+            QString name = query.value("name").toString().trimmed();
+            if (!name.isEmpty()) {
+                result.append(name);
+            }
+        }
+    }
+    return result;
+}
+
+bool LocalCacheService::saveList(const QString& listName, const QString& color, const QString& folderName, const QString& listType) {
+    QString name = listName.trimmed();
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare("INSERT OR REPLACE INTO lists (name, color, folderName, listType, createdAt) "
+                  "VALUES (:name, :color, :folderName, :listType, :createdAt)");
+    query.bindValue(":name", name);
+    query.bindValue(":color", color.trimmed());
+    query.bindValue(":folderName", folderName.trimmed());
+    query.bindValue(":listType", listType.trimmed().isEmpty() ? QStringLiteral("Task List") : listType.trimmed());
+    query.bindValue(":createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (!query.exec()) {
+        qWarning() << "Failed to save list:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QStringList LocalCacheService::getAllFolders() {
+    QStringList result;
+    QSqlQuery query("SELECT name FROM folders ORDER BY lower(name)", m_db);
+    while (query.next()) {
+        QString name = query.value("name").toString().trimmed();
+        if (!name.isEmpty()) {
+            result.append(name);
+        }
+    }
+    return result;
+}
+
+bool LocalCacheService::saveFolder(const QString& folderName) {
+    QString name = folderName.trimmed();
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare("INSERT OR IGNORE INTO folders (name, createdAt) VALUES (:name, :createdAt)");
+    query.bindValue(":name", name);
+    query.bindValue(":createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (!query.exec()) {
+        qWarning() << "Failed to save folder:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QStringList LocalCacheService::getAllTags() {
+    QSet<QString> names;
+
+    QSqlQuery query("SELECT name FROM tags", m_db);
+    while (query.next()) {
+        QString name = query.value("name").toString().trimmed();
+        if (!name.isEmpty()) {
+            names.insert(name);
+        }
+    }
+
+    QSqlQuery taskQuery("SELECT tags FROM tasks WHERE status != 'trashed'", m_db);
+    while (taskQuery.next()) {
+        const QStringList tags = taskQuery.value("tags").toString().split(",", Qt::SkipEmptyParts);
+        for (const QString& rawTag : tags) {
+            QString tag = rawTag.trimmed();
+            if (!tag.isEmpty()) {
+                names.insert(tag);
+            }
+        }
+    }
+
+    QStringList result = names.values();
+    result.sort(Qt::CaseInsensitive);
+    return result;
+}
+
+bool LocalCacheService::saveTag(const QString& tagName, const QString& color, const QString& parentTag) {
+    QString name = tagName.trimmed();
+    if (name.isEmpty()) {
+        return false;
+    }
+
+    QSqlQuery query(m_db);
+    query.prepare("INSERT OR REPLACE INTO tags (name, color, parentTag, createdAt) "
+                  "VALUES (:name, :color, :parentTag, :createdAt)");
+    query.bindValue(":name", name);
+    query.bindValue(":color", color.trimmed());
+    query.bindValue(":parentTag", parentTag.trimmed());
+    query.bindValue(":createdAt", QDateTime::currentDateTime().toString(Qt::ISODate));
+    if (!query.exec()) {
+        qWarning() << "Failed to save tag:" << query.lastError().text();
+        return false;
+    }
+    return true;
+}
+
+QString LocalCacheService::getTagColor(const QString& tagName) {
+    QSqlQuery query(m_db);
+    query.prepare("SELECT color FROM tags WHERE name = :name");
+    query.bindValue(":name", tagName.trimmed());
+    if (query.exec() && query.next()) {
+        return query.value("color").toString();
+    }
+    return QString();
 }

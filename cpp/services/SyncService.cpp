@@ -58,10 +58,16 @@ void SyncService::onRemoteTasksFetched(const QList<Task>& tasks) {
             m_cacheService->saveTask(remoteTask, false); // false = not dirty
             savedCount++;
         } else {
-            // Conflict handling: local wins if newer, or if local is dirty and timestamps are equal
-            if (localTask.updatedAt > remoteTask.updatedAt || (localTask.isDirty && localTask.updatedAt >= remoteTask.updatedAt)) {
-                // Local is newer or pending sync, ignore remote
-            } else if (localTask.updatedAt < remoteTask.updatedAt) {
+            // Local pending changes must never be overwritten by stale remote data.
+            if (localTask.isDirty) {
+                continue;
+            }
+
+            if (!remoteTask.updatedAt.isValid()) {
+                continue;
+            }
+
+            if (localTask.updatedAt < remoteTask.updatedAt) {
                 // Remote is newer, update local
                 m_cacheService->saveTask(remoteTask, false); // false = not dirty
                 savedCount++;
@@ -71,5 +77,6 @@ void SyncService::onRemoteTasksFetched(const QList<Task>& tasks) {
     
     if (savedCount > 0) {
         qDebug() << "SyncEngine: Applied" << savedCount << "remote updates to local cache.";
+        emit tasksChanged();
     }
 }

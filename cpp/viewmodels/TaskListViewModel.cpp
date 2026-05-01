@@ -2,6 +2,13 @@
 #include <QDate>
 #include <algorithm>
 
+namespace {
+QString normalizedListName(const QString& listName) {
+    QString name = listName.trimmed();
+    return name.isEmpty() ? QStringLiteral("Inbox") : name;
+}
+}
+
 TaskListViewModel::TaskListViewModel(TaskService* taskService, QObject *parent)
     : QAbstractListModel(parent), m_taskService(taskService) {
     connect(m_taskService, &TaskService::tasksChanged, this, &TaskListViewModel::onTasksChanged);
@@ -30,6 +37,7 @@ QVariant TaskListViewModel::data(const QModelIndex &index, int role) const {
         case IsPinnedRole: return task.isPinned;
         case SectionRole: return getTaskSection(task);
         case TagsRole: return task.tags;
+        case ListRole: return normalizedListName(task.listId);
         default: return QVariant();
     }
 }
@@ -46,6 +54,7 @@ QHash<int, QByteArray> TaskListViewModel::roleNames() const {
     roles[IsPinnedRole] = "isPinned";
     roles[SectionRole] = "section";
     roles[TagsRole] = "tags";
+    roles[ListRole] = "listName";
     return roles;
 }
 
@@ -76,6 +85,11 @@ int TaskListViewModel::getTaskSectionOrder(const Task& task) {
 }
 
 void TaskListViewModel::loadTasks() {
+    QString selectedId;
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        selectedId = m_tasks[m_selectedTaskIndex].id;
+    }
+
     beginResetModel();
     QList<Task> allTasks = m_taskService->getTasks(m_searchQuery);
     m_tasks.clear();
@@ -84,8 +98,16 @@ void TaskListViewModel::loadTasks() {
     
     // Apply filters
     for (const Task& task : allTasks) {
+        if (m_filterDate == "Completed") {
+            if (!task.isCompleted) continue;
+        }
+
         // Tag Filter
         if (!m_filterTag.isEmpty() && !task.tags.contains(m_filterTag, Qt::CaseInsensitive)) {
+            continue;
+        }
+
+        if (!m_filterList.isEmpty() && normalizedListName(task.listId).compare(m_filterList, Qt::CaseInsensitive) != 0) {
             continue;
         }
         
@@ -95,11 +117,13 @@ void TaskListViewModel::loadTasks() {
         }
         
         // Date Filter (Inbox=All incomplete, Today=Today, Next 7 Days=<=7 days)
-        if (!m_filterDate.isEmpty() && m_filterDate != "Inbox") {
+        if (!m_filterDate.isEmpty() && m_filterDate != "Inbox" && m_filterDate != "All" && m_filterDate != "Completed" && m_filterDate != "Calendar") {
             if (m_filterDate == "Today") {
                 if (!task.dueAt.isValid() || task.dueAt.date() != today) continue;
             } else if (m_filterDate == "Next 7 Days") {
                 if (!task.dueAt.isValid() || task.dueAt.date() < today || task.dueAt.date() > today.addDays(7)) continue;
+            } else if (m_filterDate == "No Date") {
+                if (task.dueAt.isValid()) continue;
             }
             // Calendar could be handled differently if needed, skipping for now
         }
@@ -132,15 +156,23 @@ void TaskListViewModel::loadTasks() {
         return a.createdAt < b.createdAt;
     });
     
-    // Clear selection if list changes drastically, or keep it if possible (simplified for MVP: clear it)
     m_selectedTaskIndex = -1;
+    if (!selectedId.isEmpty()) {
+        for (int i = 0; i < m_tasks.size(); ++i) {
+            if (m_tasks[i].id == selectedId) {
+                m_selectedTaskIndex = i;
+                break;
+            }
+        }
+    }
     emit selectedTaskChanged();
     
     endResetModel();
 }
 
-void TaskListViewModel::addTask(const QString& title, const QString& description, int priority, const QString& dueAt, const QStringList& tags) {
-    m_taskService->createTask(title, description, priority, dueAt, tags);
+void TaskListViewModel::addTask(const QString& title, const QString& description, int priority, const QString& dueAt, const QStringList& tags, const QString& listName) {
+    QString targetList = listName.trimmed().isEmpty() ? (m_filterList.isEmpty() ? QStringLiteral("Inbox") : m_filterList) : listName;
+    m_taskService->createTask(title, description, priority, dueAt, tags, targetList);
 }
 
 void TaskListViewModel::toggleTaskCompletion(int row) {
@@ -222,6 +254,19 @@ void TaskListViewModel::setSearchQuery(const QString& query) {
 void TaskListViewModel::setFilterTag(const QString& tag) {
     if (m_filterTag != tag) {
         m_filterTag = tag;
+        m_filterList = "";
+        m_filterDate = "All";
+        emit filterChanged();
+        loadTasks();
+    }
+}
+
+void TaskListViewModel::setFilterList(const QString& listName) {
+    QString normalized = normalizedListName(listName);
+    if (m_filterList != normalized) {
+        m_filterList = normalized;
+        m_filterTag = "";
+        m_filterDate = "All";
         emit filterChanged();
         loadTasks();
     }
@@ -238,7 +283,8 @@ void TaskListViewModel::setFilterPriority(int priority) {
 void TaskListViewModel::setFilterDate(const QString& date) {
     if (m_filterDate != date) {
         m_filterDate = date;
-        m_filterTag = ""; // Optional: Clear tag filter when changing sidebar sections
+        m_filterTag = "";
+        m_filterList = "";
         emit filterChanged();
         loadTasks();
     }
@@ -247,6 +293,7 @@ void TaskListViewModel::setFilterDate(const QString& date) {
 void TaskListViewModel::clearFilters() {
     m_searchQuery = "";
     m_filterTag = "";
+    m_filterList = "";
     m_filterPriority = -1;
     m_filterDate = "Inbox";
     emit filterChanged();
@@ -254,18 +301,54 @@ void TaskListViewModel::clearFilters() {
 }
 
 QStringList TaskListViewModel::getAllTags() const {
-    QSet<QString> uniqueTags;
-    QList<Task> allTasks = m_taskService->getTasks();
-    for (const Task& t : allTasks) {
-        if (!t.isCompleted && t.status != "trashed") {
-            for (const QString& tag : t.tags) {
-                uniqueTags.insert(tag.trimmed());
-            }
-        }
+    return m_taskService->getTags();
+}
+
+QStringList TaskListViewModel::getAllLists() const {
+    return m_taskService->getLists();
+}
+
+QStringList TaskListViewModel::getVisibleLists() const {
+    QStringList lists = m_taskService->getLists();
+    lists.removeAll(QStringLiteral("Inbox"));
+    return lists;
+}
+
+QStringList TaskListViewModel::getRootLists() const {
+    return m_taskService->getRootLists();
+}
+
+QStringList TaskListViewModel::getListsForFolder(const QString& folderName) const {
+    return m_taskService->getListsForFolder(folderName);
+}
+
+QStringList TaskListViewModel::getAllFolders() const {
+    return m_taskService->getFolders();
+}
+
+void TaskListViewModel::createList(const QString& listName, const QString& color, const QString& folderName, const QString& listType) {
+    if (m_taskService->createList(listName, color, folderName, listType)) {
+        emit filterChanged();
+        emit tasksModified();
     }
-    QStringList result = uniqueTags.values();
-    result.sort(Qt::CaseInsensitive);
-    return result;
+}
+
+void TaskListViewModel::createFolder(const QString& folderName) {
+    if (m_taskService->createFolder(folderName)) {
+        emit filterChanged();
+        emit tasksModified();
+    }
+}
+
+void TaskListViewModel::createTag(const QString& tagName, const QString& color, const QString& parentTag) {
+    if (m_taskService->createTag(tagName, color, parentTag)) {
+        emit filterChanged();
+        emit tasksModified();
+    }
+}
+
+QString TaskListViewModel::getSavedTagColor(const QString& tagName) const {
+    return m_taskService->getTagColor(tagName);
 }
 
 // --- Task Detail Selection ---
@@ -309,6 +392,12 @@ QStringList TaskListViewModel::selectedTaskTags() const {
     return QStringList();
 }
 
+QString TaskListViewModel::selectedTaskList() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return normalizedListName(m_tasks[m_selectedTaskIndex].listId);
+    return "Inbox";
+}
+
 void TaskListViewModel::updateSelectedTaskDescription(const QString& description) {
     if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
         Task& task = m_tasks[m_selectedTaskIndex];
@@ -333,6 +422,17 @@ void TaskListViewModel::updateSelectedTaskTags(const QString& tagsString) {
         Task& task = m_tasks[m_selectedTaskIndex];
         task.tags = tagsString.split(",", Qt::SkipEmptyParts);
         for(QString& tag : task.tags) tag = tag.trimmed();
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+        emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
+    }
+}
+
+void TaskListViewModel::updateSelectedTaskList(const QString& listName) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task task = m_tasks[m_selectedTaskIndex];
+        task.listId = normalizedListName(listName);
+        m_taskService->createList(task.listId);
         m_taskService->updateTask(task);
         emit selectedTaskChanged();
         emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
@@ -399,6 +499,40 @@ int TaskListViewModel::getAllTaskCount() const {
     int count = 0;
     for (const Task& task : allTasks) {
         if (!task.isCompleted && task.status != "trashed") {
+            count++;
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getCompletedTaskCount() const {
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (task.isCompleted && task.status != "trashed") {
+            count++;
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getTagTaskCount(const QString& tag) const {
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed" && task.tags.contains(tag, Qt::CaseInsensitive)) {
+            count++;
+        }
+    }
+    return count;
+}
+
+int TaskListViewModel::getListTaskCount(const QString& listName) const {
+    QString normalized = normalizedListName(listName);
+    QList<Task> allTasks = m_taskService->getTasks();
+    int count = 0;
+    for (const Task& task : allTasks) {
+        if (!task.isCompleted && task.status != "trashed" && normalizedListName(task.listId).compare(normalized, Qt::CaseInsensitive) == 0) {
             count++;
         }
     }

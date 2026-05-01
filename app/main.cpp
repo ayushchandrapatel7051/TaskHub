@@ -43,6 +43,8 @@ int main(int argc, char *argv[])
     AuthService authService(apiKey);
     FirestoreService firestoreService(&authService, projectId);
     SyncService syncService(&localCacheService, &firestoreService);
+    QObject::connect(&syncService, &SyncService::tasksChanged,
+                     &taskService, &TaskService::tasksChanged);
     
     // Auto-start sync loop
     syncService.startSync();
@@ -55,6 +57,7 @@ int main(int argc, char *argv[])
     // Inject ViewModel into QML context
     engine.rootContext()->setContextProperty("taskListViewModel", &taskListViewModel);
     engine.rootContext()->setContextProperty("authService", &authService);
+    engine.rootContext()->setContextProperty("syncService", &syncService);
 
     const QUrl url(u"qrc:/qml/Main.qml"_qs);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
