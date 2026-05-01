@@ -14,6 +14,7 @@ Rectangle {
         width: 220
         height: 60
         padding: 0
+        z: 1001
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
 
         background: Rectangle {
@@ -77,15 +78,18 @@ Rectangle {
         }
     }
 
-    // ── Date picker popup ──────────────────────────────────────────────
+    // ── Date picker popup (Custom Calendar) ───────────────────────────
     Popup {
         id: datePicker
         parent: Overlay.overlay
         modal: false
-        width: 240
-        height: 170
+        width: 320
+        height: Math.min(380, Overlay.overlay.height - 80)
         padding: 0
+        z: 1000
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        onAboutToShow: priorityPicker.close()
 
         background: Rectangle {
             color: "#1e1e2e"
@@ -97,79 +101,215 @@ Rectangle {
         ColumnLayout {
             anchors.fill: parent
             anchors.margins: 12
-            spacing: 8
+            spacing: 12
 
-            Text {
-                text: "Quick Date"
-                color: Theme.textSecondary
-                font.pixelSize: 11
-                font.bold: true
-                font.family: Theme.fontFamily
-                font.letterSpacing: 0.5
+            // Current month/year and navigation
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 10
+
+                Button {
+                    text: "◀"
+                    flat: true
+                    padding: 4
+                    contentItem: Text {
+                        text: parent.text
+                        color: Theme.textMuted
+                        font.pixelSize: 14
+                    }
+                    onClicked: {
+                        var d = calendarHelper.currentMonth
+                        d.setMonth(d.getMonth() - 1)
+                        calendarHelper.currentMonth = d
+                    }
+                }
+
+                Text {
+                    id: monthYearText
+                    text: calendarHelper.monthYearString
+                    color: Theme.textPrimary
+                    font.pixelSize: 14
+                    font.bold: true
+                    font.family: Theme.fontFamily
+                    Layout.fillWidth: true
+                    horizontalAlignment: Text.AlignHCenter
+                }
+
+                Button {
+                    text: "▶"
+                    flat: true
+                    padding: 4
+                    contentItem: Text {
+                        text: parent.text
+                        color: Theme.textMuted
+                        font.pixelSize: 14
+                    }
+                    onClicked: {
+                        var d = calendarHelper.currentMonth
+                        d.setMonth(d.getMonth() + 1)
+                        calendarHelper.currentMonth = d
+                    }
+                }
             }
 
-            Repeater {
-                model: [
-                    { label: "Today",        icon: "☀",  days: 0  },
-                    { label: "Tomorrow",      icon: "🌅", days: 1  },
-                    { label: "Next Week",     icon: "📅", days: 7  },
-                    { label: "No Date",       icon: "✕",  days: -1 }
-                ]
+            // Day of week headers
+            GridLayout {
+                Layout.fillWidth: true
+                columns: 7
+                columnSpacing: 2
+                rowSpacing: 2
 
-                delegate: Rectangle {
-                    Layout.fillWidth: true
-                    height: 32
-                    radius: Theme.radiusSmall
-                    color: dateHover.containsMouse ? Theme.surfaceHover : "transparent"
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        spacing: 10
-
-                        Text {
-                            text: modelData.icon
-                            font.pixelSize: 14
-                        }
-                        Text {
-                            text: modelData.label
-                            color: Theme.textPrimary
-                            font.pixelSize: 13
-                            font.family: Theme.fontFamily
-                        }
-                        Item { Layout.fillWidth: true }
-                        Text {
-                            visible: modelData.days >= 0
-                            text: modelData.days === 0
-                                  ? Qt.formatDate(new Date(), "ddd")
-                                  : (modelData.days === 1
-                                     ? Qt.formatDate(new Date(new Date().getTime() + 86400000), "ddd")
-                                     : "")
-                            color: Theme.textMuted
-                            font.pixelSize: 11
-                            font.family: Theme.fontFamily
-                            anchors.rightMargin: 8
-                        }
+                Repeater {
+                    model: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                    delegate: Text {
+                        text: modelData
+                        color: Theme.textMuted
+                        font.pixelSize: 11
+                        font.bold: true
+                        font.family: Theme.fontFamily
+                        Layout.fillWidth: true
+                        horizontalAlignment: Text.AlignHCenter
+                        topPadding: 4
+                        bottomPadding: 4
                     }
+                }
+            }
 
-                    HoverHandler { id: dateHover }
+            // Calendar days grid
+            GridLayout {
+                id: calendarGrid
+                Layout.fillWidth: true
+                columns: 7
+                columnSpacing: 2
+                rowSpacing: 2
 
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            if (modelData.days === -1) {
-                                addBar.selectedDate = ""
-                            } else {
-                                var d = new Date()
-                                d.setDate(d.getDate() + modelData.days)
-                                addBar.selectedDate = Qt.formatDate(d, "yyyy-MM-dd")
+                Repeater {
+                    id: daysRepeater
+                    model: calendarHelper.days
+
+                    delegate: Rectangle {
+                        Layout.fillWidth: true
+                        Layout.preferredHeight: 36
+                        radius: 4
+                        color: {
+                            if (modelData.isCurrentMonth === false) return "transparent"
+                            if (modelData.isToday) return Theme.primary + "33"
+                            if (modelData.isSelected) return Theme.primary
+                            return "transparent"
+                        }
+                        border.color: modelData.isToday ? Theme.primary : "transparent"
+                        border.width: 1
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: modelData.day
+                            color: {
+                                if (modelData.isCurrentMonth === false) return Theme.textMuted
+                                if (modelData.isSelected) return "white"
+                                if (modelData.isToday) return Theme.primary
+                                return Theme.textPrimary
                             }
-                            datePicker.close()
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            font.bold: modelData.isToday || modelData.isSelected
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            enabled: modelData.isCurrentMonth
+                            cursorShape: enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: {
+                                addBar.selectedDate = modelData.dateString
+                                calendarHelper.selectDate(modelData.dateString)
+                                datePicker.close()
+                            }
                         }
                     }
                 }
             }
+
+            // Quick action buttons
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 4
+
+                Button {
+                    text: "Today"
+                    Layout.fillWidth: true
+                    palette.buttonText: Theme.textPrimary
+                    onClicked: {
+                        var today = new Date()
+                        addBar.selectedDate = Qt.formatDate(today, "yyyy-MM-dd")
+                        calendarHelper.currentMonth = today
+                        datePicker.close()
+                    }
+                }
+
+                Button {
+                    text: "Clear"
+                    Layout.fillWidth: true
+                    palette.buttonText: Theme.textPrimary
+                    onClicked: {
+                        addBar.selectedDate = ""
+                        datePicker.close()
+                    }
+                }
+            }
+        }
+
+        QtObject {
+            id: calendarHelper
+            property date currentMonth: new Date()
+            property var days: []
+
+            onCurrentMonthChanged: updateDays()
+
+            function updateDays() {
+                var month = currentMonth.getMonth()
+                var year = currentMonth.getFullYear()
+                var firstDay = new Date(year, month, 1)
+                var lastDay = new Date(year, month + 1, 0)
+                var startDate = new Date(firstDay)
+                startDate.setDate(startDate.getDate() - firstDay.getDay())
+
+                var newDays = []
+                var d = new Date(startDate)
+                var today = new Date()
+
+                for (var i = 0; i < 42; i++) {
+                    var isCurrentMonth = d.getMonth() === month
+                    var isToday = d.toDateString() === today.toDateString()
+                    var isSelected = false
+
+                    newDays.push({
+                        day: d.getDate(),
+                        dateString: Qt.formatDate(d, "yyyy-MM-dd"),
+                        isCurrentMonth: isCurrentMonth,
+                        isToday: isToday,
+                        isSelected: isSelected
+                    })
+
+                    d.setDate(d.getDate() + 1)
+                }
+
+                days = newDays
+                daysRepeater.model = newDays
+            }
+
+            function selectDate(dateStr) {
+                for (var i = 0; i < days.length; i++) {
+                    days[i].isSelected = (days[i].dateString === dateStr)
+                }
+                daysRepeater.model = days.slice()
+            }
+
+            property string monthYearString: {
+                var months = ["January", "February", "March", "April", "May", "June",
+                              "July", "August", "September", "October", "November", "December"]
+                return months[currentMonth.getMonth()] + " " + currentMonth.getFullYear()
+            }
+
+            Component.onCompleted: updateDays()
         }
     }
 
@@ -181,7 +321,10 @@ Rectangle {
 
         Shortcut {
             sequence: "Ctrl+K"
-            onActivated: addBar.expanded = true; taskInput.forceActiveFocus()
+            onActivated: {
+                addBar.expanded = true
+                taskInput.forceActiveFocus()
+            }
         }
 
         // Header
@@ -243,6 +386,7 @@ Rectangle {
         Item {
             id: addBar
             Layout.fillWidth: true
+            Layout.preferredHeight: height
 
             // Exposed state
             property bool expanded: false
@@ -377,91 +521,122 @@ Rectangle {
                     }
 
                     // Action row
-                    RowLayout {
+                    ColumnLayout {
                         Layout.fillWidth: true
-                        Layout.leftMargin: 12
-                        Layout.rightMargin: 12
-                        Layout.topMargin: 8
-                        Layout.bottomMargin: 8
-                        spacing: 4
+                        spacing: 8
 
-                        // Date button
-                        Rectangle {
-                            height: 28
-                            width: dateActionRow.implicitWidth + 16
-                            radius: Theme.radiusSmall
-                            color: addBar.selectedDate !== "" ? Theme.primary + "22" : "transparent"
-                            border.color: addBar.selectedDate !== "" ? Theme.primary : "transparent"
+                        // First row: Date and Priority
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
 
-                            RowLayout {
-                                id: dateActionRow
-                                anchors.centerIn: parent
-                                spacing: 5
+                            // Date button
+                            Rectangle {
+                                height: 28
+                                Layout.minimumWidth: 100
+                                Layout.maximumWidth: 150
+                                radius: Theme.radiusSmall
+                                color: addBar.selectedDate !== "" ? Theme.primary + "22" : "transparent"
+                                border.color: addBar.selectedDate !== "" ? Theme.primary : "transparent"
 
-                                Text {
-                                    text: "📅"
-                                    font.pixelSize: 13
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    spacing: 4
+
+                                    Text {
+                                        text: "📅"
+                                        font.pixelSize: 12
+                                    }
+                                    Text {
+                                        text: addBar.selectedDate !== "" ? addBar.selectedDate : "Date"
+                                        color: addBar.selectedDate !== "" ? Theme.primary : Theme.textMuted
+                                        font.pixelSize: 11
+                                        font.family: Theme.fontFamily
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
                                 }
-                                Text {
-                                    text: addBar.selectedDate !== "" ? addBar.selectedDate : "Date"
-                                    color: addBar.selectedDate !== "" ? Theme.primary : Theme.textMuted
-                                    font.pixelSize: 12
-                                    font.family: Theme.fontFamily
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        datePicker.close()
+                                        var pos = mapToItem(Overlay.overlay, 0, 0)
+                                        var spaceBelow = Overlay.overlay.height - (pos.y + height + 8)
+                                        
+                                        if (spaceBelow < datePicker.height + 12) {
+                                            datePicker.y = Math.max(12, pos.y - datePicker.height - 8)
+                                        } else {
+                                            datePicker.y = pos.y + height + 8
+                                        }
+                                        
+                                        datePicker.x = Math.max(12, Math.min(pos.x, Overlay.overlay.width - datePicker.width - 12))
+                                        datePicker.open()
+                                    }
                                 }
                             }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    var pos = mapToItem(Overlay.overlay, 0, height)
-                                    datePicker.x = Math.max(12, Math.min(pos.x - datePicker.width + width, Overlay.overlay.width - datePicker.width - 12))
-                                    datePicker.y = Math.min(pos.y + 8, Overlay.overlay.height - datePicker.height - 12)
-                                    datePicker.open()
+                            // Priority button
+                            Rectangle {
+                                height: 28
+                                Layout.minimumWidth: 80
+                                Layout.maximumWidth: 120
+                                radius: Theme.radiusSmall
+                                color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] + "22" : "transparent"
+                                border.color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : "transparent"
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8
+                                    anchors.rightMargin: 8
+                                    spacing: 4
+
+                                    Text {
+                                        text: "⚑"
+                                        color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : Theme.textMuted
+                                        font.pixelSize: 12
+                                    }
+                                    Text {
+                                        visible: addBar.selectedPriority > 0
+                                        text: addBar.priorityLabels[addBar.selectedPriority]
+                                        color: addBar.priorityColors[addBar.selectedPriority]
+                                        font.pixelSize: 11
+                                        font.family: Theme.fontFamily
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        priorityPicker.close()
+                                        var pos = mapToItem(Overlay.overlay, 0, 0)
+                                        var spaceBelow = Overlay.overlay.height - (pos.y + height + 8)
+                                        
+                                        if (spaceBelow < priorityPicker.height + 12) {
+                                            priorityPicker.y = Math.max(12, pos.y - priorityPicker.height - 8)
+                                        } else {
+                                            priorityPicker.y = pos.y + height + 8
+                                        }
+                                        
+                                        priorityPicker.x = Math.max(12, Math.min(pos.x, Overlay.overlay.width - priorityPicker.width - 12))
+                                        priorityPicker.open()
+                                    }
                                 }
                             }
+
+                            Item { Layout.fillWidth: true }
                         }
 
-                        // Priority button
-                        Rectangle {
-                            height: 28
-                            width: priorityActionRow.implicitWidth + 16
-                            radius: Theme.radiusSmall
-                            color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] + "22" : "transparent"
-                            border.color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : "transparent"
-
-                            RowLayout {
-                                id: priorityActionRow
-                                anchors.centerIn: parent
-                                spacing: 5
-
-                                Text {
-                                    text: "⚑"
-                                    color: addBar.selectedPriority > 0 ? addBar.priorityColors[addBar.selectedPriority] : Theme.textMuted
-                                    font.pixelSize: 14
-                                }
-                                Text {
-                                    visible: addBar.selectedPriority > 0
-                                    text: addBar.priorityLabels[addBar.selectedPriority]
-                                    color: addBar.priorityColors[addBar.selectedPriority]
-                                    font.pixelSize: 12
-                                    font.family: Theme.fontFamily
-                                }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    var pos = mapToItem(Overlay.overlay, 0, height)
-                                    priorityPicker.x = Math.max(12, Math.min(pos.x - priorityPicker.width + width, Overlay.overlay.width - priorityPicker.width - 12))
-                                    priorityPicker.y = Math.min(pos.y + 8, Overlay.overlay.height - priorityPicker.height - 12)
-                                    priorityPicker.open()
-                                }
-                            }
-                        }
-
-                        Item { Layout.fillWidth: true }
+                        // Second row: Cancel and Add buttons
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 6
 
                         // Cancel button
                         Rectangle {
@@ -474,7 +649,7 @@ Rectangle {
                                 anchors.centerIn: parent
                                 text: "Cancel"
                                 color: Theme.textSecondary
-                                font.pixelSize: 13
+                                font.pixelSize: 12
                                 font.family: Theme.fontFamily
                             }
 
@@ -507,7 +682,7 @@ Rectangle {
                                 anchors.centerIn: parent
                                 text: "Add"
                                 color: taskInput.text.trim() !== "" ? "white" : Theme.textMuted
-                                font.pixelSize: 13
+                                font.pixelSize: 12
                                 font.bold: true
                                 font.family: Theme.fontFamily
                             }
@@ -520,6 +695,7 @@ Rectangle {
                                 onClicked: addBar.submit()
                             }
                         }
+                    }
                     }
                 }
             }
