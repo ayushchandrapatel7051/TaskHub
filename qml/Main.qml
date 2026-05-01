@@ -30,11 +30,16 @@ ApplicationWindow {
 
     Component {
         id: dashboardView
-        RowLayout {
+        Rectangle {
+            anchors.fill: parent
+            color: Theme.background
+
+            RowLayout {
+            anchors.fill: parent
             spacing: 0
             
             Sidebar {
-                Layout.preferredWidth: 260
+                Layout.preferredWidth: 290
                 Layout.fillHeight: true
             }
             
@@ -56,8 +61,10 @@ ApplicationWindow {
             }
             
             TaskDetail {
-                Layout.preferredWidth: 350
+                Layout.preferredWidth: 0
                 Layout.fillHeight: true
+                visible: false
+            }
             }
         }
     }

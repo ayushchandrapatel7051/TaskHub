@@ -5,14 +5,14 @@ import "../theme"
 
 Rectangle {
     id: root
-    height: visible ? 60 : 0
+    height: visible ? 48 : 0
     visible: !isSectionCollapsed
     property bool isSelected: root.taskIndex === taskListViewModel.selectedTaskIndex
     
-    color: isSelected ? Theme.surfaceHover : (mouseArea.containsMouse ? Theme.surfaceHover : Theme.surface)
+    color: isSelected ? "#22262d" : (mouseArea.containsMouse ? "#1b1f25" : "transparent")
     radius: Theme.radiusMedium
-    border.color: isSelected ? Theme.primary : Theme.divider
-    border.width: isSelected ? 2 : 1
+    border.color: "transparent"
+    border.width: 0
 
     property string taskTitle: ""
     property bool taskCompleted: false
@@ -43,8 +43,8 @@ Rectangle {
 
     RowLayout {
         anchors.fill: parent
-        anchors.margins: 15
-        spacing: 15
+        anchors.margins: 10
+        spacing: 10
         visible: root.visible
 
         // Drag Handle (Placeholder for Drag logic)
@@ -57,9 +57,9 @@ Rectangle {
 
         // Priority Indicator
         Rectangle {
-            width: 4
-            height: 30
-            radius: 2
+            width: 3
+            height: parent.height - 8
+            radius: 1
             color: {
                 if (taskPriority === 3) return Theme.accentRed
                 if (taskPriority === 2) return Theme.accentYellow
@@ -70,9 +70,9 @@ Rectangle {
 
         // Checkbox
         Rectangle {
-            width: 24
-            height: 24
-            radius: 12
+            width: 16
+            height: 16
+            radius: 4
             border.color: taskCompleted ? Theme.primary : Theme.textMuted
             border.width: 2
             color: taskCompleted ? Theme.primary : "transparent"
@@ -83,7 +83,7 @@ Rectangle {
                 text: "✓"
                 color: "white"
                 visible: taskCompleted
-                font.pixelSize: 14
+                font.pixelSize: 10
             }
             
             MouseArea {
@@ -127,7 +127,7 @@ Rectangle {
                     Rectangle {
                         color: Theme.surfaceHover
                         radius: Theme.radiusSmall
-                        height: 20
+                        height: 18
                         width: tagText.width + 12
                         
                         Text {
