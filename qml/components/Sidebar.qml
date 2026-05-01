@@ -4,140 +4,122 @@ import QtQuick.Layouts
 import "../theme"
 
 Rectangle {
-    color: Theme.surface
+    color: Theme.panel
     border.color: Theme.divider
     border.width: 1
 
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: 15
-        spacing: 5
+        spacing: 0
 
-        // User Profile Area Placeholder
-        RowLayout {
+        Rectangle {
+            Layout.preferredWidth: 50
+            Layout.fillHeight: true
+            color: Theme.panelAlt
+            border.color: Theme.divider
+            border.width: 1
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.topMargin: 14
+                anchors.bottomMargin: 12
+                spacing: 10
+
+                Repeater {
+                    model: ["👤", "✓", "📅", "◉", "🕘", "🔍"]
+                    Label {
+                        Layout.alignment: Qt.AlignHCenter
+                        text: modelData
+                        color: Theme.textSecondary
+                        font.pixelSize: 18
+                    }
+                }
+
+                Item { Layout.fillHeight: true }
+                Label {
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "↻"
+                    color: Theme.textMuted
+                    font.pixelSize: 18
+                }
+            }
+        }
+
+        ColumnLayout {
             Layout.fillWidth: true
-            Layout.bottomMargin: 20
-            
-            Rectangle {
-                width: 32
-                height: 32
-                radius: 16
-                color: Theme.primary
-                
-                Text {
-                    anchors.centerIn: parent
-                    text: "U"
-                    color: "white"
-                    font.bold: true
-                    font.family: Theme.fontFamily
-                }
-            }
-            
-            Text {
-                text: "User Workspace"
-                color: Theme.textPrimary
-                font.pixelSize: 14
-                font.bold: true
-                font.family: Theme.fontFamily
-                Layout.fillWidth: true
-            }
-        }
+            Layout.fillHeight: true
+            anchors.margins: 10
+            spacing: 8
 
-        // Navigation Items
-        Text {
-            text: "Views"
-            color: Theme.textMuted
-            font.pixelSize: 12
-            font.bold: true
-            font.family: Theme.fontFamily
-            Layout.leftMargin: 10
-            Layout.topMargin: 10
-        }
+            Repeater {
+                model: [
+                    { name: "All", count: "117" },
+                    { name: "Today", count: "6" },
+                    { name: "Next 7 Days", count: "6" },
+                    { name: "Inbox", count: "1" },
+                    { name: "Summary", count: "" }
+                ]
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 38
+                    radius: 7
+                    color: taskListViewModel.activeFilterDate === modelData.name ? Theme.surfaceHover : "transparent"
 
-        Repeater {
-            model: ["Inbox", "Today", "Next 7 Days", "Calendar"]
-            
-            Rectangle {
-                Layout.fillWidth: true
-                height: 40
-                color: {
-                    if (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "") {
-                        return Theme.primary + "33" // 20% opacity primary
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+
+                        Text {
+                            text: modelData.name
+                            color: Theme.textPrimary
+                            font.pixelSize: 15
+                            font.family: Theme.fontFamily
+                        }
+                        Item { Layout.fillWidth: true }
+                        Text {
+                            text: modelData.count
+                            color: Theme.textMuted
+                            font.pixelSize: 13
+                            visible: modelData.count !== ""
+                        }
                     }
-                    return itemMouseArea.containsMouse ? Theme.surfaceHover : "transparent"
-                }
-                radius: Theme.radiusMedium
-                
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.left: parent.left
-                    anchors.leftMargin: 15
-                    text: modelData
-                    color: (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "") ? Theme.primary : Theme.textPrimary
-                    font.pixelSize: 15
-                    font.bold: (taskListViewModel.activeFilterDate === modelData && taskListViewModel.activeFilterTag === "")
-                    font.family: Theme.fontFamily
-                }
-                
-                MouseArea {
-                    id: itemMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        taskListViewModel.setFilterDate(modelData)
+
+                    MouseArea {
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: taskListViewModel.setFilterDate(modelData.name)
                     }
                 }
             }
-        }
-        
-        // Tags Section
-        Text {
-            text: "Tags"
-            color: Theme.textMuted
-            font.pixelSize: 12
-            font.bold: true
-            font.family: Theme.fontFamily
-            Layout.leftMargin: 10
-            Layout.topMargin: 20
-        }
-        
-        Repeater {
-            model: taskListViewModel.getAllTags()
-            
-            Rectangle {
-                Layout.fillWidth: true
-                height: 35
-                color: {
-                    if (taskListViewModel.activeFilterTag === modelData) {
-                        return Theme.primary + "33"
+
+            Rectangle { Layout.fillWidth: true; height: 1; color: Theme.divider; Layout.topMargin: 6; Layout.bottomMargin: 8 }
+
+            Text { text: "Lists"; color: Theme.textMuted; font.pixelSize: 14; font.bold: true; font.family: Theme.fontFamily }
+
+            Repeater {
+                model: ["My 2025 Goals", "Programming", "Finance", "Skills", "Work"]
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 36
+                    radius: 7
+                    color: listHover.containsMouse ? Theme.surfaceHover : "transparent"
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        text: modelData
+                        color: Theme.textPrimary
+                        font.pixelSize: 14
+                        font.family: Theme.fontFamily
                     }
-                    return tagMouseArea.containsMouse ? Theme.surfaceHover : "transparent"
-                }
-                radius: Theme.radiusMedium
-                
-                Text {
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.left: parent.left
-                    anchors.leftMargin: 15
-                    text: "#" + modelData
-                    color: taskListViewModel.activeFilterTag === modelData ? Theme.primary : Theme.textSecondary
-                    font.pixelSize: 14
-                    font.family: Theme.fontFamily
-                }
-                
-                MouseArea {
-                    id: tagMouseArea
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        taskListViewModel.setFilterTag(modelData)
-                    }
+                    HoverHandler { id: listHover }
                 }
             }
-        }
 
-        Item { Layout.fillHeight: true } // Spacer
+            Item { Layout.fillHeight: true }
+        }
     }
 }

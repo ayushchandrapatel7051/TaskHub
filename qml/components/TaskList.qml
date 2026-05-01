@@ -9,6 +9,8 @@ Rectangle {
     // ── Priority picker popup ──────────────────────────────────────────
     Popup {
         id: priorityPicker
+        parent: Overlay.overlay
+        modal: false
         width: 220
         height: 60
         padding: 0
@@ -78,6 +80,8 @@ Rectangle {
     // ── Date picker popup ──────────────────────────────────────────────
     Popup {
         id: datePicker
+        parent: Overlay.overlay
+        modal: false
         width: 240
         height: 170
         padding: 0
@@ -173,11 +177,11 @@ Rectangle {
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 20
-        spacing: 15
+        spacing: 10
 
         Shortcut {
             sequence: "Ctrl+K"
-            onActivated: searchInput.forceActiveFocus()
+            onActivated: addBar.expanded = true; taskInput.forceActiveFocus()
         }
 
         // Header
@@ -187,7 +191,7 @@ Rectangle {
             Text {
                 text: taskListViewModel.activeFilterDate === "" ? "Inbox" : taskListViewModel.activeFilterDate
                 color: Theme.textPrimary
-                font.pixelSize: 28
+                font.pixelSize: 34
                 font.bold: true
                 font.family: Theme.fontFamily
             }
@@ -235,63 +239,6 @@ Rectangle {
             }
         }
 
-        // Search Bar
-        Rectangle {
-            Layout.fillWidth: true
-            height: 40
-            color: Theme.surface
-            radius: Theme.radiusMedium
-            border.color: searchInput.activeFocus ? Theme.primary : Theme.divider
-
-            RowLayout {
-                anchors.fill: parent
-                anchors.margins: 10
-
-                Text {
-                    text: "🔍"
-                    color: Theme.textMuted
-                    font.pixelSize: 14
-                }
-
-                TextField {
-                    id: searchInput
-                    Layout.fillWidth: true
-                    placeholderText: "Search tasks..."
-                    color: Theme.textPrimary
-                    font.pixelSize: 14
-                    font.family: Theme.fontFamily
-                    background: null
-                    text: taskListViewModel.searchQuery
-
-                    Timer {
-                        id: debounceTimer
-                        interval: 300
-                        onTriggered: taskListViewModel.setSearchQuery(searchInput.text)
-                    }
-
-                    onTextEdited: debounceTimer.restart()
-                }
-
-                Text {
-                    visible: searchInput.text !== ""
-                    text: "✕"
-                    color: Theme.textMuted
-                    font.pixelSize: 12
-                    font.bold: true
-
-                    MouseArea {
-                        anchors.fill: parent
-                        anchors.margins: -5
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            searchInput.text = ""
-                            taskListViewModel.setSearchQuery("")
-                        }
-                    }
-                }
-            }
-        }
-
         // ── TickTick-style Add Task Bar ─────────────────────────────────
         Item {
             id: addBar
@@ -326,11 +273,11 @@ Rectangle {
             Rectangle {
                 id: collapsedBar
                 width: parent.width
-                height: 44
+                height: 40
                 visible: !addBar.expanded
-                color: collapsedHover.containsMouse ? Theme.surface : "transparent"
+                color: Theme.panel
                 radius: Theme.radiusMedium
-                border.color: collapsedHover.containsMouse ? Theme.divider : "transparent"
+                border.color: Theme.primary
 
                 Behavior on color { ColorAnimation { duration: 120 } }
 
@@ -348,8 +295,8 @@ Rectangle {
                     }
 
                     Text {
-                        text: "Add Task to " + (taskListViewModel.activeFilterDate === "" ? "Inbox" : taskListViewModel.activeFilterDate)
-                        color: collapsedHover.containsMouse ? Theme.textSecondary : Theme.textMuted
+                        text: "Add task to \"Inbox\""
+                        color: Theme.textMuted
                         font.pixelSize: 14
                         font.family: Theme.fontFamily
                         Layout.fillWidth: true
@@ -467,8 +414,9 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    datePicker.x = mapToItem(null, 0, 0).x
-                                    datePicker.y = mapToItem(null, 0, 0).y - datePicker.height - 6
+                                    var pos = mapToItem(Overlay.overlay, 0, height)
+                                    datePicker.x = Math.max(12, Math.min(pos.x - datePicker.width + width, Overlay.overlay.width - datePicker.width - 12))
+                                    datePicker.y = Math.min(pos.y + 8, Overlay.overlay.height - datePicker.height - 12)
                                     datePicker.open()
                                 }
                             }
@@ -505,8 +453,9 @@ Rectangle {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    priorityPicker.x = mapToItem(null, 0, 0).x
-                                    priorityPicker.y = mapToItem(null, 0, 0).y - priorityPicker.height - 6
+                                    var pos = mapToItem(Overlay.overlay, 0, height)
+                                    priorityPicker.x = Math.max(12, Math.min(pos.x - priorityPicker.width + width, Overlay.overlay.width - priorityPicker.width - 12))
+                                    priorityPicker.y = Math.min(pos.y + 8, Overlay.overlay.height - priorityPicker.height - 12)
                                     priorityPicker.open()
                                 }
                             }
