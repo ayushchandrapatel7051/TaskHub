@@ -5,7 +5,7 @@ import "../theme"
 
 Rectangle {
     id: root
-    height: visible ? 40 : 0
+    height: visible ? 42 : 0
     visible: !isSectionCollapsed
 
     property bool isSelected: root.taskIndex === taskListViewModel.selectedTaskIndex
@@ -16,6 +16,8 @@ Rectangle {
     property bool isSectionCollapsed: taskListViewModel.isSectionCollapsed(taskSection)
     property var taskTags: []
     property int taskIndex: -1
+    property string taskList: ""
+    property string taskDueAt: ""
 
     signal toggled()
     signal renamed(string newTitle)
@@ -60,19 +62,29 @@ Rectangle {
             Layout.preferredHeight: 22
             radius: 2
             color: {
-                if (taskCompleted) return "transparent"
-                if (taskPriority === 3) return Theme.accentRed
-                if (taskPriority === 2) return Theme.accentYellow
-                if (taskPriority === 1) return Theme.primary
-                return "transparent"
+                if (taskTags.length === 0) return "transparent"
+                var saved = taskListViewModel.getSavedTagColor(taskTags[0])
+                if (saved !== "") return saved
+                var palette = ["#e83d3d", "#eb8a23", "#e0e72c", "#2ef02a", "#4b6fff", "#bb68ef", "#eb68aa"]
+                var hash = 0
+                for (var i = 0; i < taskTags[0].length; i++) {
+                    hash = taskTags[0].charCodeAt(i) + ((hash << 5) - hash)
+                }
+                return palette[Math.abs(hash) % palette.length]
             }
         }
 
         Rectangle {
             Layout.preferredWidth: 15
             Layout.preferredHeight: 15
-            radius: 4
-            border.color: taskCompleted ? Theme.primary : "#7a7f89"
+            radius: 3
+            border.color: {
+                if (taskCompleted) return Theme.primary
+                if (taskPriority === 3) return Theme.accentRed
+                if (taskPriority === 2) return Theme.accentYellow
+                if (taskPriority === 1) return Theme.primary
+                return "#7a7f89"
+            }
             border.width: 1.4
             color: taskCompleted ? Theme.primary : "transparent"
 
@@ -111,26 +123,119 @@ Rectangle {
             }
         }
 
+        // ── Right meta row: tags → list → due date ────────────────────
         Row {
             spacing: 6
-            visible: root.taskTags.length > 0
-            Layout.maximumWidth: 260
+            Layout.maximumWidth: 320
             clip: true
 
+            // Tag chips
             Repeater {
-                model: root.taskTags
+                model: root.taskTags.slice(0, 3)  // cap at 3 tags
 
                 Rectangle {
                     height: 20
-                    width: tagText.width + 12
-                    radius: 10
-                    color: "#75435a"
+                    width: tagText.width + 16
+                    radius: 4
+                    color: Qt.rgba(tagAccentColor.r, tagAccentColor.g, tagAccentColor.b, 0.12)
 
                     Text {
                         id: tagText
-                        anchors.centerIn: parent
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 7
                         text: modelData
-                        color: "#f0cedc"
+                        color: Qt.rgba(tagAccentColor.r, tagAccentColor.g, tagAccentColor.b, 0.7)
+                        font.pixelSize: 11
+                        font.family: Theme.fontFamily
+                    }
+
+                    property color tagAccentColor: {
+                        var saved = taskListViewModel.getSavedTagColor(modelData)
+                        if (saved !== "") return saved
+                        var palette = ["#e83d3d", "#eb8a23", "#e0e72c", "#2ef02a", "#4b6fff", "#bb68ef", "#eb68aa"]
+                        var hash = 0
+                        for (var i = 0; i < modelData.length; i++) {
+                            hash = modelData.charCodeAt(i) + ((hash << 5) - hash)
+                        }
+                        return palette[Math.abs(hash) % palette.length]
+                    }
+                }
+            }
+
+            // List name pill — hide when already filtered by this list
+            Rectangle {
+                visible: root.taskList !== "" && root.taskList !== "Inbox" &&
+                         taskListViewModel.activeFilterList !== root.taskList
+                height: 20
+                width: listLabel.width + 22
+                radius: 4
+                color: "#2d2d2d"
+
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 6
+                    anchors.rightMargin: 6
+                    spacing: 4
+
+                    SidebarIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 11
+                        height: 11
+                        iconName: "list"
+                        iconColor: "#9a9a9a"
+                        strokeWidth: 1.5
+                    }
+                    Text {
+                        id: listLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: root.taskList
+                        color: "#9a9a9a"
+                        font.pixelSize: 11
+                        font.family: Theme.fontFamily
+                    }
+                }
+            }
+
+            // Due date pill
+            Rectangle {
+                visible: root.taskDueAt !== ""
+                height: 20
+                width: dateLabel.width + 20
+                radius: 4
+                color: "transparent"
+
+                Row {
+                    anchors.fill: parent
+                    anchors.leftMargin: 4
+                    spacing: 4
+
+                    SidebarIcon {
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 11
+                        height: 11
+                        iconName: "calendar"
+                        iconColor: {
+                            if (root.taskSection === "Overdue") return Theme.accentRed
+                            if (root.taskSection === "Today")   return Theme.accentYellow
+                            return "#8a8f99"
+                        }
+                        strokeWidth: 1.5
+                    }
+                    Text {
+                        id: dateLabel
+                        anchors.verticalCenter: parent.verticalCenter
+                        text: {
+                            if (root.taskDueAt === "") return ""
+                            var d = new Date(root.taskDueAt)
+                            var months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+                            return months[d.getMonth()] + " " + d.getDate()
+                        }
+                        color: {
+                            if (root.taskSection === "Overdue") return Theme.accentRed
+                            if (root.taskSection === "Today")   return Theme.accentYellow
+                            return "#8a8f99"
+                        }
                         font.pixelSize: 11
                         font.family: Theme.fontFamily
                     }

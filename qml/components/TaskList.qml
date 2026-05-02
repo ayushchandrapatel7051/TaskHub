@@ -402,7 +402,7 @@ Rectangle {
         id: addOptionsPopup
         parent: Overlay.overlay
         modal: false
-        width: 280
+        width: 320
         height: addOptionsContent.implicitHeight + 28
         padding: 0
         z: 1002
@@ -496,17 +496,94 @@ Rectangle {
                     iconColor: "#dcdcdc"
                     strokeWidth: 1.6
                 }
-                TextField {
-                    Layout.fillWidth: true
-                    text: addBar.selectedTags
-                    placeholderText: "Tags"
-                    color: "#f1f1f1"
-                    placeholderTextColor: "#777777"
+                Text {
+                    text: "Tags"
+                    color: "#bdbdbd"
                     font.pixelSize: 13
                     font.family: Theme.fontFamily
-                    background: Rectangle { color: "#1c1c1c"; radius: 6; border.color: "#363636"; border.width: 1 }
-                    onTextChanged: addBar.selectedTags = text
                 }
+            }
+
+            // Tag chips grid
+            Flow {
+                Layout.fillWidth: true
+                spacing: 6
+
+                Repeater {
+                    model: taskListViewModel.getAllTags()
+
+                    Rectangle {
+                        property bool isSelected: addBar.selectedTags.split(",").map(function(t){ return t.trim() }).indexOf(modelData) !== -1
+                        property color tagColor: {
+                            var saved = taskListViewModel.getSavedTagColor(modelData)
+                            if (saved !== "") return saved
+                            var palette = ["#e83d3d", "#eb8a23", "#e0e72c", "#2ef02a", "#4b6fff", "#bb68ef", "#eb68aa"]
+                            var hash = 0
+                            for (var i = 0; i < modelData.length; i++) {
+                                hash = modelData.charCodeAt(i) + ((hash << 5) - hash)
+                            }
+                            return palette[Math.abs(hash) % palette.length]
+                        }
+
+                        height: 22
+                        width: chipLabel.width + 18
+                        radius: 4
+                        color: isSelected ? Qt.rgba(tagColor.r, tagColor.g, tagColor.b, 0.28) : "#2a2a2a"
+                        border.color: isSelected ? tagColor : "#444444"
+                        border.width: 1
+
+                        // Left accent bar
+                        Rectangle {
+                            width: 3
+                            height: parent.height
+                            radius: 2
+                            color: parent.tagColor
+                            opacity: parent.isSelected ? 1.0 : 0.5
+                        }
+
+                        Text {
+                            id: chipLabel
+                            anchors.verticalCenter: parent.verticalCenter
+                            anchors.left: parent.left
+                            anchors.leftMargin: 7
+                            text: modelData
+                            color: parent.isSelected ? parent.tagColor : "#aaaaaa"
+                            font.pixelSize: 11
+                            font.family: Theme.fontFamily
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                var current = addBar.selectedTags.trim() === "" ? [] : addBar.selectedTags.split(",").map(function(t){ return t.trim() }).filter(function(t){ return t !== "" })
+                                var idx = current.indexOf(modelData)
+                                if (idx === -1) {
+                                    current.push(modelData)
+                                } else {
+                                    current.splice(idx, 1)
+                                }
+                                addBar.selectedTags = current.join(", ")
+                                tagsInputOpts.text = addBar.selectedTags
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Custom tag text input
+            TextField {
+                id: tagsInputOpts
+                Layout.fillWidth: true
+                text: addBar.selectedTags
+                placeholderText: "Or type tags, comma-separated"
+                color: "#f1f1f1"
+                placeholderTextColor: "#777777"
+                font.pixelSize: 12
+                font.family: Theme.fontFamily
+                background: Rectangle { color: "#1c1c1c"; radius: 6; border.color: "#363636"; border.width: 1 }
+                padding: 6
+                onTextChanged: addBar.selectedTags = text
             }
 
             RowLayout {
@@ -1176,6 +1253,8 @@ Rectangle {
                 taskPriority: model.priority !== undefined ? model.priority : 0
                 taskSection: model.section
                 taskTags: model.tags !== undefined ? model.tags : []
+                taskList: model.listName !== undefined ? model.listName : ""
+                taskDueAt: model.dueAt !== undefined ? model.dueAt : ""
 
                 onToggled: taskListViewModel.toggleTaskCompletion(index)
                 onRenamed: function(newTitle) { taskListViewModel.renameTask(index, newTitle) }

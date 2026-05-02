@@ -893,6 +893,10 @@ Rectangle {
         property string selectedFolder: "None"
         property string selectedListType: "Task List"
 
+        Overlay.modal: Rectangle {
+            color: "#88000000"
+        }
+
         onOpened: {
             newListInput.text = ""
             selectedFolder = "None"
@@ -1059,7 +1063,7 @@ Rectangle {
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 14
-                    Text { text: "Show in Smart List"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 92 }
+                    Text { text: "Show in Smart List"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 130 }
                     SidebarComboBox { Layout.fillWidth: true; model: ["All tasks", "No"] }
                 }
 
@@ -1096,7 +1100,7 @@ Rectangle {
                 Layout.fillHeight: true
                 color: "#202020"
                 radius: 0
-
+                clip: true
                 Rectangle {
                     anchors.centerIn: parent
                     width: 270
@@ -1150,6 +1154,10 @@ Rectangle {
         height: 168
         padding: 0
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        Overlay.modal: Rectangle {
+            color: "#88000000"
+        }
 
         onOpened: {
             newFolderInput.text = ""
@@ -1236,6 +1244,10 @@ Rectangle {
         padding: 0
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
         property string selectedColor: "#bb68ef"
+
+        Overlay.modal: Rectangle {
+            color: "#88000000"
+        }
 
         onOpened: {
             newTagInput.text = ""

@@ -38,189 +38,256 @@ Item {
             ctx.lineJoin = "round"
 
             function line(x1, y1, x2, y2) {
-                ctx.beginPath()
-                ctx.moveTo(x1, y1)
-                ctx.lineTo(x2, y2)
-                ctx.stroke()
-            }
-
-            function rect(x, y, rw, rh) {
-                ctx.beginPath()
-                ctx.rect(x, y, rw, rh)
-                ctx.stroke()
+                ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke()
             }
 
             function circle(x, y, rr, fill) {
-                ctx.beginPath()
-                ctx.arc(x, y, rr, 0, Math.PI * 2)
+                ctx.beginPath(); ctx.arc(x, y, rr, 0, Math.PI * 2)
                 fill ? ctx.fill() : ctx.stroke()
             }
 
+            function roundRect(x, y, rw, rh, rad) {
+                ctx.beginPath()
+                ctx.moveTo(x + rad, y)
+                ctx.lineTo(x + rw - rad, y)
+                ctx.arcTo(x + rw, y, x + rw, y + rad, rad)
+                ctx.lineTo(x + rw, y + rh - rad)
+                ctx.arcTo(x + rw, y + rh, x + rw - rad, y + rh, rad)
+                ctx.lineTo(x + rad, y + rh)
+                ctx.arcTo(x, y + rh, x, y + rh - rad, rad)
+                ctx.lineTo(x, y + rad)
+                ctx.arcTo(x, y, x + rad, y, rad)
+                ctx.closePath()
+                ctx.stroke()
+            }
+
+            var p = s * 0.1  // padding
+
             switch (root.iconName) {
             case "tasks":
-                line(r * 0.55, r * 1.05, r * 0.9, r * 1.4)
-                line(r * 0.9, r * 1.4, r * 1.5, r * 0.65)
+                roundRect(p, p, s - p*2, s - p*2, s*0.18)
+                line(s*0.28, s*0.54, s*0.44, s*0.7)
+                line(s*0.44, s*0.7, s*0.72, s*0.36)
                 break
             case "calendar":
-                rect(r * 0.45, r * 0.5, r * 1.1, r * 1.0)
-                line(r * 0.45, r * 0.8, r * 1.55, r * 0.8)
-                line(r * 0.75, r * 0.35, r * 0.75, r * 0.65)
-                line(r * 1.25, r * 0.35, r * 1.25, r * 0.65)
+                roundRect(p, s*0.2, s - p*2, s*0.72, s*0.1)
+                line(p, s*0.42, s - p, s*0.42)
+                line(s*0.32, p, s*0.32, s*0.3)
+                line(s*0.68, p, s*0.68, s*0.3)
+                circle(s*0.36, s*0.68, s*0.06, true)
+                circle(s*0.5,  s*0.68, s*0.06, true)
+                circle(s*0.64, s*0.68, s*0.06, true)
                 break
             case "matrix":
-                rect(r * 0.42, r * 0.42, r * 0.44, r * 0.44)
-                rect(r * 1.14, r * 0.42, r * 0.44, r * 0.44)
-                rect(r * 0.42, r * 1.14, r * 0.44, r * 0.44)
-                rect(r * 1.14, r * 1.14, r * 0.44, r * 0.44)
+                roundRect(p, p, s*0.38, s*0.38, s*0.06)
+                roundRect(s*0.52, p, s*0.38, s*0.38, s*0.06)
+                roundRect(p, s*0.52, s*0.38, s*0.38, s*0.06)
+                roundRect(s*0.52, s*0.52, s*0.38, s*0.38, s*0.06)
                 break
             case "pomodoro":
-                circle(cx, cy, r * 0.58, false)
-                line(cx, cy, cx, r * 0.62)
-                line(cx, cy, r * 1.38, cy)
+                circle(cx, cy, s*0.38, false)
+                line(cx, s*0.22, cx, cy)
+                line(cx, cy, s*0.72, s*0.36)
+                line(s*0.38, p*0.5, s*0.62, p*0.5)
                 break
             case "habit":
                 ctx.beginPath()
-                ctx.arc(cx, cy, r * 0.58, -Math.PI / 2, Math.PI * 0.85)
+                ctx.arc(cx, cy, s*0.32, -Math.PI*0.65, Math.PI*0.7)
                 ctx.stroke()
-                circle(cx, cy, r * 0.18, true)
+                line(s*0.76, s*0.66, s*0.88, s*0.54)
+                line(s*0.76, s*0.66, s*0.64, s*0.58)
                 break
             case "search":
-                circle(r * 0.85, r * 0.85, r * 0.34, false)
-                line(r * 1.12, r * 1.12, r * 1.55, r * 1.55)
+                circle(s*0.4, s*0.4, s*0.26, false)
+                ctx.lineWidth = root.strokeWidth * 1.2
+                line(s*0.59, s*0.59, s*0.88, s*0.88)
+                ctx.lineWidth = root.strokeWidth
                 break
             case "sync":
                 ctx.beginPath()
-                ctx.arc(cx, cy, r * 0.52, Math.PI * 0.2, Math.PI * 1.45)
+                ctx.arc(cx, cy, s*0.3, -Math.PI*0.5, Math.PI*0.55)
                 ctx.stroke()
-                line(r * 0.78, r * 0.42, r * 1.03, r * 0.18)
-                line(r * 0.78, r * 0.42, r * 0.72, r * 0.08)
+                line(s*0.76, s*0.56, s*0.88, s*0.7)
+                line(s*0.76, s*0.56, s*0.62, s*0.64)
                 ctx.beginPath()
-                ctx.arc(cx, cy, r * 0.52, Math.PI * 1.2, Math.PI * 2.45)
+                ctx.arc(cx, cy, s*0.3, Math.PI*0.55, Math.PI*1.5)
                 ctx.stroke()
-                line(r * 1.22, r * 1.58, r * 0.97, r * 1.82)
-                line(r * 1.22, r * 1.58, r * 1.28, r * 1.92)
+                line(s*0.24, s*0.44, s*0.12, s*0.3)
+                line(s*0.24, s*0.44, s*0.38, s*0.36)
                 break
             case "notifications":
-                circle(cx, cy, r * 0.38, true)
+                ctx.beginPath()
+                ctx.arc(cx, s*0.42, s*0.22, Math.PI, 0)
+                ctx.lineTo(s*0.78, s*0.72)
+                ctx.lineTo(s*0.22, s*0.72)
+                ctx.closePath()
+                ctx.stroke()
+                ctx.beginPath()
+                ctx.arc(cx, s*0.74, s*0.1, 0, Math.PI)
+                ctx.stroke()
+                line(s*0.42, s*0.22, s*0.58, s*0.22)
                 break
             case "help":
-                ctx.font = "bold " + Math.round(s * 0.82) + "px sans-serif"
+                circle(cx, cy, s*0.38, false)
+                ctx.font = "bold " + Math.round(s*0.46) + "px sans-serif"
                 ctx.textAlign = "center"
                 ctx.textBaseline = "middle"
-                ctx.fillText("?", cx, cy + r * 0.04)
+                ctx.fillText("?", cx, cy + s*0.02)
                 break
             case "all":
-                line(r * 0.48, r * 0.6, r * 1.52, r * 0.6)
-                line(r * 0.48, r * 1.0, r * 1.52, r * 1.0)
-                line(r * 0.48, r * 1.4, r * 1.52, r * 1.4)
+                circle(s*0.18, s*0.28, s*0.07, true)
+                line(s*0.3, s*0.28, s*0.9, s*0.28)
+                circle(s*0.18, s*0.5, s*0.07, true)
+                line(s*0.3, s*0.5, s*0.9, s*0.5)
+                circle(s*0.18, s*0.72, s*0.07, true)
+                line(s*0.3, s*0.72, s*0.9, s*0.72)
                 break
             case "today":
-                rect(r * 0.46, r * 0.48, r * 1.08, r * 1.08)
-                line(r * 0.46, r * 0.78, r * 1.54, r * 0.78)
-                circle(cx, r * 1.18, r * 0.16, true)
+                roundRect(p, s*0.2, s - p*2, s*0.72, s*0.1)
+                line(p, s*0.42, s - p, s*0.42)
+                line(s*0.32, p, s*0.32, s*0.3)
+                line(s*0.68, p, s*0.68, s*0.3)
+                circle(cx, s*0.65, s*0.1, true)
                 break
             case "next":
-                rect(r * 0.45, r * 0.48, r * 1.1, r * 1.08)
-                line(r * 0.45, r * 0.78, r * 1.55, r * 0.78)
-                ctx.font = "bold " + Math.round(s * 0.5) + "px sans-serif"
+                roundRect(p, s*0.2, s - p*2, s*0.72, s*0.1)
+                line(p, s*0.42, s - p, s*0.42)
+                line(s*0.32, p, s*0.32, s*0.3)
+                line(s*0.68, p, s*0.68, s*0.3)
+                ctx.font = "bold " + Math.round(s*0.3) + "px sans-serif"
                 ctx.textAlign = "center"
                 ctx.textBaseline = "middle"
-                ctx.fillText("7", cx, r * 1.18)
+                ctx.fillText("7", cx, s*0.65)
                 break
             case "inbox":
             case "list":
-                line(r * 0.48, r * 0.7, r * 1.52, r * 0.7)
-                line(r * 0.36, r * 1.18, r * 0.58, r * 0.7)
-                line(r * 1.64, r * 1.18, r * 1.42, r * 0.7)
-                line(r * 0.36, r * 1.18, r * 1.64, r * 1.18)
+                line(p, s*0.55, p, s*0.88)
+                line(p, s*0.88, s-p, s*0.88)
+                line(s-p, s*0.88, s-p, s*0.55)
+                ctx.beginPath()
+                ctx.moveTo(p, s*0.55)
+                ctx.quadraticCurveTo(s*0.24, s*0.34, s*0.38, s*0.34)
+                ctx.lineTo(s*0.62, s*0.34)
+                ctx.quadraticCurveTo(s*0.76, s*0.34, s-p, s*0.55)
+                ctx.stroke()
                 break
             case "folder":
-                line(r * 0.35, r * 0.68, r * 0.78, r * 0.68)
-                line(r * 0.78, r * 0.68, r * 0.98, r * 0.88)
-                line(r * 0.98, r * 0.88, r * 1.65, r * 0.88)
-                line(r * 1.65, r * 0.88, r * 1.52, r * 1.48)
-                line(r * 1.52, r * 1.48, r * 0.35, r * 1.48)
-                line(r * 0.35, r * 1.48, r * 0.35, r * 0.68)
+                ctx.beginPath()
+                ctx.moveTo(p, s*0.38)
+                ctx.lineTo(p, s*0.88)
+                ctx.lineTo(s-p, s*0.88)
+                ctx.lineTo(s-p, s*0.46)
+                ctx.lineTo(s*0.52, s*0.46)
+                ctx.lineTo(s*0.38, s*0.3)
+                ctx.lineTo(p*2, s*0.3)
+                ctx.closePath()
+                ctx.stroke()
                 break
             case "summary":
-                rect(r * 0.52, r * 0.42, r * 0.96, r * 1.16)
-                line(r * 0.72, r * 0.78, r * 1.28, r * 0.78)
-                line(r * 0.72, r * 1.02, r * 1.28, r * 1.02)
-                line(r * 0.72, r * 1.26, r * 1.08, r * 1.26)
+                roundRect(s*0.2, p, s*0.6, s - p*2, s*0.08)
+                line(s*0.34, s*0.36, s*0.66, s*0.36)
+                line(s*0.34, s*0.5,  s*0.66, s*0.5)
+                line(s*0.34, s*0.64, s*0.54, s*0.64)
                 break
             case "flag":
-            case "flag-empty":
-                line(r * 0.62, r * 0.45, r * 0.62, r * 1.58)
+                line(s*0.26, p, s*0.26, s-p)
                 ctx.beginPath()
-                ctx.moveTo(r * 0.62, r * 0.5)
-                ctx.lineTo(r * 1.42, r * 0.72)
-                ctx.lineTo(r * 0.62, r * 0.94)
-                if (root.iconName === "flag") {
-                    ctx.closePath()
-                    ctx.fill()
-                } else {
-                    ctx.stroke()
-                }
+                ctx.moveTo(s*0.26, s*0.14)
+                ctx.lineTo(s*0.86, s*0.36)
+                ctx.lineTo(s*0.26, s*0.58)
+                ctx.closePath()
+                ctx.fill()
+                break
+            case "flag-empty":
+                line(s*0.26, p, s*0.26, s-p)
+                ctx.beginPath()
+                ctx.moveTo(s*0.26, s*0.14)
+                ctx.lineTo(s*0.86, s*0.36)
+                ctx.lineTo(s*0.26, s*0.58)
+                ctx.closePath()
+                ctx.stroke()
                 break
             case "tag":
-                line(cx, r * 0.38, r * 1.62, cy)
-                line(r * 1.62, cy, cx, r * 1.62)
-                line(cx, r * 1.62, r * 0.38, cy)
-                line(r * 0.38, cy, cx, r * 0.38)
+                ctx.beginPath()
+                ctx.moveTo(s*0.18, s*0.18)
+                ctx.lineTo(s*0.62, s*0.18)
+                ctx.lineTo(s*0.88, s*0.5)
+                ctx.lineTo(s*0.62, s*0.82)
+                ctx.lineTo(s*0.18, s*0.82)
+                ctx.closePath()
+                ctx.stroke()
+                circle(s*0.34, s*0.34, s*0.08, true)
                 break
             case "subtasks":
-                line(r * 0.55, r * 0.45, r * 0.55, r * 1.25)
-                line(r * 0.55, r * 1.25, r * 0.88, r * 1.25)
-                line(r * 0.88, r * 1.25, r * 0.72, r * 1.08)
-                line(r * 0.88, r * 1.25, r * 0.72, r * 1.42)
-                line(r * 1.05, r * 0.65, r * 1.5, r * 0.65)
-                line(r * 1.05, r * 1.25, r * 1.5, r * 1.25)
+                line(s*0.24, s*0.2, s*0.24, s*0.72)
+                line(s*0.24, s*0.72, s*0.46, s*0.72)
+                line(s*0.46, s*0.72, s*0.38, s*0.62)
+                line(s*0.46, s*0.72, s*0.38, s*0.82)
+                circle(s*0.24, s*0.2, s*0.07, true)
+                line(s*0.56, s*0.3, s*0.88, s*0.3)
+                line(s*0.56, s*0.5, s*0.88, s*0.5)
+                line(s*0.56, s*0.7, s*0.76, s*0.7)
                 break
             case "attachment":
                 ctx.beginPath()
-                ctx.arc(r * 0.95, r * 0.95, r * 0.42, Math.PI * 0.15, Math.PI * 1.55)
+                ctx.arc(s*0.54, s*0.5, s*0.28, -Math.PI*0.8, Math.PI*0.2)
                 ctx.stroke()
                 ctx.beginPath()
-                ctx.arc(r * 1.06, r * 0.95, r * 0.26, Math.PI * 0.15, Math.PI * 1.6)
+                ctx.arc(s*0.54, s*0.5, s*0.16, -Math.PI*0.8, Math.PI*0.2)
                 ctx.stroke()
                 break
             case "template":
-                rect(r * 0.55, r * 0.38, r * 0.9, r * 1.24)
-                line(r * 0.75, r * 0.72, r * 1.25, r * 0.72)
-                line(r * 0.75, r * 1.0, r * 1.25, r * 1.0)
-                line(r * 0.75, r * 1.28, r * 1.06, r * 1.28)
+                roundRect(s*0.2, p, s*0.6, s - p*2, s*0.08)
+                line(s*0.34, s*0.36, s*0.66, s*0.36)
+                line(s*0.34, s*0.5,  s*0.66, s*0.5)
+                line(s*0.34, s*0.64, s*0.54, s*0.64)
                 break
             case "settings":
-                circle(cx, cy, r * 0.2, false)
-                for (var i = 0; i < 8; i++) {
-                    var a = i * Math.PI / 4
-                    line(cx + Math.cos(a) * r * 0.38,
-                         cy + Math.sin(a) * r * 0.38,
-                         cx + Math.cos(a) * r * 0.58,
-                         cy + Math.sin(a) * r * 0.58)
+                circle(cx, cy, s*0.14, false)
+                for (var i = 0; i < 6; i++) {
+                    var a = i * Math.PI / 3
+                    line(cx + Math.cos(a)*s*0.22, cy + Math.sin(a)*s*0.22,
+                        cx + Math.cos(a)*s*0.38, cy + Math.sin(a)*s*0.38)
                 }
                 break
             case "chevronDown":
-                line(r * 0.55, r * 0.75, cx, r * 1.2)
-                line(cx, r * 1.2, r * 1.45, r * 0.75)
+                line(s*0.24, s*0.36, cx, s*0.64)
+                line(cx, s*0.64, s*0.76, s*0.36)
                 break
             case "completed":
-                rect(r * 0.46, r * 0.46, r * 1.08, r * 1.08)
-                line(r * 0.68, r * 1.02, r * 0.92, r * 1.26)
-                line(r * 0.92, r * 1.26, r * 1.34, r * 0.74)
+                roundRect(p, p, s - p*2, s - p*2, s*0.14)
+                line(s*0.28, s*0.52, s*0.44, s*0.7)
+                line(s*0.44, s*0.7, s*0.74, s*0.3)
                 break
             case "trash":
-                line(r * 0.55, r * 0.68, r * 1.45, r * 1.48)
-                line(r * 1.45, r * 0.68, r * 0.55, r * 1.48)
-                rect(r * 0.46, r * 0.58, r * 1.08, r * 0.98)
+                line(s*0.14, s*0.28, s*0.86, s*0.28)
+                line(s*0.36, s*0.28, s*0.36, s*0.16)
+                line(s*0.36, s*0.16, s*0.64, s*0.16)
+                line(s*0.64, s*0.16, s*0.64, s*0.28)
+                ctx.beginPath()
+                ctx.moveTo(s*0.22, s*0.28)
+                ctx.lineTo(s*0.3,  s*0.86)
+                ctx.lineTo(s*0.7,  s*0.86)
+                ctx.lineTo(s*0.78, s*0.28)
+                ctx.stroke()
+                line(s*0.5,  s*0.4, s*0.5,  s*0.76)
+                line(s*0.38, s*0.41, s*0.4, s*0.76)
+                line(s*0.62, s*0.41, s*0.6, s*0.76)
                 break
             case "premium":
-                line(cx, r * 0.42, r * 1.5, r * 1.34)
-                line(cx, r * 0.42, r * 0.5, r * 1.34)
-                line(r * 0.5, r * 1.34, r * 1.5, r * 1.34)
+                ctx.beginPath()
+                ctx.moveTo(s*0.1, s*0.78)
+                ctx.lineTo(s*0.1, s*0.44)
+                ctx.lineTo(s*0.34, s*0.62)
+                ctx.lineTo(s*0.5,  s*0.2)
+                ctx.lineTo(s*0.66, s*0.62)
+                ctx.lineTo(s*0.9,  s*0.44)
+                ctx.lineTo(s*0.9,  s*0.78)
+                ctx.closePath()
+                ctx.stroke()
                 break
             default:
-                circle(cx, cy, r * 0.4, false)
+                circle(cx, cy, s*0.3, false)
                 break
             }
         }

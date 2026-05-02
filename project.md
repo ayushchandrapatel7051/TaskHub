@@ -27,11 +27,16 @@ TaskHub/
 │   ├── Main.qml                   # Root window & Router (Switches between Login and Dashboard)
 │   ├── components/                # Reusable UI Widgets
 │   │   ├── CalendarView.qml       # Agenda-style view showing tasks grouped by due date
+│   │   ├── EisenhowerMatrixView.qml # 4-quadrant urgency/importance prioritization tool
+│   │   ├── HabitTrackerView.qml   # Visual tracker for recurring daily routines
 │   │   ├── LoginScreen.qml        # Handles user login and signup interfaces
-│   │   ├── Sidebar.qml            # Left navigation panel with filters and views
+│   │   ├── PomodoroView.qml       # Focus timer with customizable work/break intervals
+│   │   ├── SearchView.qml         # Global search results with advanced filtering
+│   │   ├── Sidebar.qml            # Left navigation with Filters, Lists, and Modal Popups
+│   │   ├── SidebarIcon.qml        # SVG icon wrapper with stroke and color management
 │   │   ├── TaskDetail.qml         # Right panel interactive form (Notes, Priority, Tags, Dates)
-│   │   ├── TaskItem.qml           # Individual list row delegate
-│   │   └── TaskList.qml           # Center panel with Search Bar, Quick Add, and Task List
+│   │   ├── TaskItem.qml           # Individual list row with priority-coded checkboxes
+│   │   └── TaskList.qml           # Center panel with TickTick-style Quick Add and dynamic lists
 │   └── theme/
 │       ├── Theme.qml              # Design System Singleton (Colors, Fonts, Spacing)
 │       └── qmldir                 # Exposes Theme as a global singleton to all QML files
@@ -61,13 +66,19 @@ When the application launches, `main.cpp` acts as the dependency injector:
 ### 3. The Offline-First Task Workflow (MVVM)
 TaskHub uses an **Offline-First** approach. The UI always reads from and writes to the local SQLite database first to ensure zero latency.
 
-- **Creating a Task:**
-  1. The user types a task in `TaskList.qml` and presses Enter.
-  2. QML calls `taskListViewModel.addTask(title, "")`.
-  3. The ViewModel passes this to `TaskService::createTask()`.
-  4. `TaskService` asks `LocalCacheService` to execute an `INSERT` into the SQLite database.
-  5. If successful, `TaskService` emits `tasksChanged()`.
-  6. The `TaskListViewModel` catches this signal, reloads the tasks, sorts them, and updates the UI automatically.
+- **Creating a Task (TickTick-style):**
+  1. The user types a task in the `TaskList.qml` input field.
+  2. Pressing **Enter** immediately adds the task to the local database and clears the input, allowing for rapid-fire task entry.
+  3. QML calls `taskListViewModel.addTask(title, "")`.
+  4. The ViewModel passes this to `TaskService::createTask()`.
+  5. `TaskService` asks `LocalCacheService` to execute an `INSERT` into the SQLite database.
+  6. If successful, `TaskService` emits `tasksChanged()`.
+  7. The `TaskListViewModel` catches this signal, reloads the tasks, and updates the UI.
+
+- **Visual Priority & Tagging:**
+  1. `TaskItem.qml` uses priority-based colors for completion checkboxes (e.g., Red for High, Blue for Normal).
+  2. Tags are displayed with hash-based color accent bars for easy visual categorization.
+  3. The "Add Task" popup features a multi-select dropdown for tags, pulling from existing tag data.
 
 - **Grouping and Sorting (Phase 1):**
   1. During `loadTasks()`, the C++ ViewModel automatically computes a string category for each task based on its DB state: "Pinned", "Overdue", "Today", "Upcoming", "No Date", or "Completed".
@@ -82,11 +93,19 @@ TaskHub uses an **Offline-First** approach. The UI always reads from and writes 
 - **Local Filtering**: Users can filter tasks by clicking "Tags" or predefined dates ("Today", "Inbox") in the Sidebar. The C++ ViewModel performs in-memory filtering.
 - **Native Search**: A top search bar is bound to the ViewModel. As the user types (with a 300ms UI debounce), `LocalCacheService` executes raw SQLite `LIKE` queries (`title LIKE %search% OR description LIKE %search%`) for blazing fast performance on massive datasets.
 
-### 5. Interactive Details & Calendar (Phase 6 & 7)
-- **TaskDetail Panel**: Clicking a task highlights it and populates the right-hand panel. Edits to Notes, Priority (custom chips), Tags, and Dates immediately trigger `updateTask` in the DB via ViewModel binding.
-- **Calendar View**: `Main.qml` employs a `StackLayout` to toggle between the primary list and the Agenda View.
+### 5. Specialized Productivity Views (Phase 6, 7 & 8)
+- **Calendar View**: An agenda-style view that groups tasks by due date, allowing users to visualize their schedule.
+- **Eisenhower Matrix**: A decision-making tool that categorizes tasks into four quadrants: *Urgent/Important*, *Not Urgent/Important*, *Urgent/Not Important*, and *Not Urgent/Not Important*.
+- **Habit Tracker**: A dedicated view for tracking recurring habits and streaks.
+- **Pomodoro Timer**: A focus tool with customizable work and break intervals to boost productivity.
+- **Search View**: A global search interface that utilizes SQLite's Full-Text Search capabilities.
 
-### 6. Background Cloud Synchronization (`SyncService` Phase 5)
+### 6. Interactive Popups & Modals
+- **Add List Popup**: Defined within `Sidebar.qml`, this modal allows users to create new lists with custom colors and folder nesting. It uses a proper dimming overlay to maintain focus.
+- **Add Tag Popup**: Also in `Sidebar.qml`, it enables quick creation of tags with color selection.
+- **Account & Notifications**: Lightweight popups for user profile management and app alerts.
+
+### 7. Background Cloud Synchronization (`SyncService` Phase 5)
 To keep data backed up without blocking the UI, the `SyncService` acts as a background manager.
 1. `LocalCacheService` maintains an `isDirty` schema. Any local edit flips `isDirty = 1`.
 2. Every 5 minutes, `SyncService` wakes up and queries `getDirtyTasks()`.
@@ -94,6 +113,6 @@ To keep data backed up without blocking the UI, the `SyncService` acts as a back
 4. **Paginated Sync Down:** It pulls remote tasks from Firestore, utilizing `nextPageToken` loops.
 5. **Conflict Resolution:** During sync-down, it enforces "Local Wins if Newer". If a remote task is pulled, it only overwrites the local SQLite row if `remoteTask.updatedAt > localTask.updatedAt` AND the local task is not marked dirty.
 
-### 7. The Design System (`Theme.qml`)
+### 8. The Design System (`Theme.qml`)
 Instead of hardcoding colors like `"#121212"` everywhere, we use a global singleton called `Theme.qml`.
 If we ever want to change the app's primary color from Blue to Purple, or switch from Dark Mode to Light Mode, we only need to change the values inside `Theme.qml`, and the entire application will instantly update.
