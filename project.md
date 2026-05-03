@@ -101,7 +101,11 @@ TaskHub uses an **Offline-First** approach. The UI always reads from and writes 
 - **Search View**: A global search interface that utilizes SQLite's Full-Text Search capabilities.
 
 ### 6. Interactive Popups & Modals
-- **Add List Popup**: Defined within `Sidebar.qml`, this modal allows users to create new lists with custom colors and folder nesting. It uses a proper dimming overlay to maintain focus.
+- **Add List Popup**: A sophisticated modal in `Sidebar.qml` with a **real-time visual preview** of the new list (supporting both List and Board views). It allows users to create:
+  - **Standard Task Lists**: For general productivity.
+  - **Notes Lists**: Specifically for rich-text content and brainstorming.
+  - **Smart Lists**: Integrated with the app's dynamic filtering engine.
+  The popup supports custom color selection, folder nesting, and uses a dimming overlay to maintain focus.
 - **Add Tag Popup**: Also in `Sidebar.qml`, it enables quick creation of tags with color selection.
 - **Account & Notifications**: Lightweight popups for user profile management and app alerts.
 
