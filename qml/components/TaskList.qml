@@ -867,7 +867,12 @@ Rectangle {
         Connections {
             target: taskListViewModel
             function onTasksModified() { notesList = notesRoot.loadNotes() }
-            function onFilterChanged() { notesList = notesRoot.loadNotes(); selectedNote = -1 }
+            function onFilterChanged() {
+                Qt.callLater(function() {
+                    notesList = notesRoot.loadNotes()
+                    selectedNote = -1
+                })
+            }
         }
 
         Component.onCompleted: notesList = loadNotes()
