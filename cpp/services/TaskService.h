@@ -38,6 +38,7 @@ public:
 
 signals:
   void tasksChanged();
+  void listsChanged();
 
 private:
   LocalCacheService *m_cacheService;

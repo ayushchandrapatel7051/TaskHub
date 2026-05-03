@@ -110,8 +110,8 @@ Rectangle {
             SidebarIcon {
                 Layout.preferredWidth: 16
                 Layout.preferredHeight: 16
-                iconName: "list"
-                iconColor: "#f5f5f5"
+                iconName: taskListViewModel.getListType(listRow.listName) === "Notes List" ? "summary" : "list"
+                iconColor: taskListViewModel.getListType(listRow.listName) === "Notes List" ? "#a78bfa" : "#f5f5f5"
                 strokeWidth: 1.7
             }
 

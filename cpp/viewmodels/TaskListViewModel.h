@@ -7,6 +7,9 @@
 
 class TaskListViewModel : public QAbstractListModel {
   Q_OBJECT
+  mutable QSet<QString> m_notesListNames;
+  void refreshNotesListCache();
+
 public:
   enum TaskRoles {
     IdRole = Qt::UserRole + 1,
@@ -30,6 +33,7 @@ public:
                 int role = Qt::DisplayRole) const override;
   QHash<int, QByteArray> roleNames() const override;
 
+  Q_INVOKABLE void clearSelection();
   Q_INVOKABLE void loadTasks();
   Q_INVOKABLE void addTask(const QString &title, const QString &description,
                            int priority = 0, const QString &dueAt = "",
@@ -79,7 +83,8 @@ public:
   Q_PROPERTY(QString activeFilterTag READ activeFilterTag NOTIFY filterChanged)
   Q_PROPERTY(
       QString activeFilterList READ activeFilterList NOTIFY filterChanged)
-  Q_PROPERTY(QString activeFilterDate READ activeFilterDate NOTIFY filterChanged)
+  Q_PROPERTY(
+      QString activeFilterDate READ activeFilterDate NOTIFY filterChanged)
   Q_PROPERTY(QString searchQuery READ searchQuery NOTIFY filterChanged)
   Q_PROPERTY(bool selectedTaskPinned READ selectedTaskPinned NOTIFY
                  selectedTaskChanged)

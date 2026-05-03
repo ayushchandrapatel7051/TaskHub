@@ -32,9 +32,14 @@ Rectangle {
     property string viewMode: "list"
 
     onCurrentListTypeChanged: {
-        if (currentListType === "Notes List") viewMode = "notes"
-        else if (currentListType === "Board")  viewMode = "board"
-        else                                   viewMode = "list"
+        if (currentListType === "Notes List") {
+            viewMode = "notes"
+            taskListViewModel.clearSelection()
+        } else if (currentListType === "Board") {
+            viewMode = "board"
+        } else {
+            viewMode = "list"
+        }
     }
 
     // ── popups ─────────────────────────────────────────────────────────

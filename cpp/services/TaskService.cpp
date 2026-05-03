@@ -51,6 +51,7 @@ bool TaskService::createList(const QString &listName, const QString &color,
                              const QString &folderName,
                              const QString &listType) {
   if (m_cacheService->saveList(listName, color, folderName, listType)) {
+    emit listsChanged();
     emit tasksChanged();
     return true;
   }
