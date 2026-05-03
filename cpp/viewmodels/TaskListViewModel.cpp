@@ -351,6 +351,11 @@ QString TaskListViewModel::getSavedTagColor(const QString& tagName) const {
     return m_taskService->getTagColor(tagName);
 }
 
+QString TaskListViewModel::getListType(const QString& listName) const {
+    if (listName.isEmpty()) return "Task List";
+    return m_taskService->getListType(listName);
+}
+
 // --- Task Detail Selection ---
 
 void TaskListViewModel::selectTask(int index) {
@@ -396,6 +401,12 @@ QString TaskListViewModel::selectedTaskList() const {
     if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
         return normalizedListName(m_tasks[m_selectedTaskIndex].listId);
     return "Inbox";
+}
+
+bool TaskListViewModel::selectedTaskPinned() const {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size())
+        return m_tasks[m_selectedTaskIndex].isPinned;
+    return false;
 }
 
 void TaskListViewModel::updateSelectedTaskDescription(const QString& description) {
@@ -447,6 +458,16 @@ void TaskListViewModel::updateSelectedTaskDueAt(const QString& dateStr) {
         } else {
             task.dueAt = QDateTime::fromString(dateStr, Qt::ISODate);
         }
+        m_taskService->updateTask(task);
+        emit selectedTaskChanged();
+        emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));
+    }
+}
+
+void TaskListViewModel::updateSelectedTaskPinned(bool pinned) {
+    if (m_selectedTaskIndex >= 0 && m_selectedTaskIndex < m_tasks.size()) {
+        Task& task = m_tasks[m_selectedTaskIndex];
+        task.isPinned = pinned;
         m_taskService->updateTask(task);
         emit selectedTaskChanged();
         emit dataChanged(index(m_selectedTaskIndex), index(m_selectedTaskIndex));

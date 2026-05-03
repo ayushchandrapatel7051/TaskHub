@@ -5,7 +5,7 @@ project(TaskHub VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Sql Network)
+find_package(Qt6 6.4 REQUIRED COMPONENTS Core Gui Qml Quick Sql Network QuickControls2 QuickLayouts)
 
 qt_standard_project_setup()
 
@@ -57,7 +57,7 @@ qt_add_resources(TaskHub qml_resources
 )
 
 target_link_libraries(TaskHub
-    PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Sql Qt6::Network
+    PRIVATE Qt6::Core Qt6::Gui Qt6::Qml Qt6::Quick Qt6::Sql Qt6::Network Qt6::QuickControls2 Qt6::QuickLayouts
 )
 
 set_target_properties(TaskHub PROPERTIES

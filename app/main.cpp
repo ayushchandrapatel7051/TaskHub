@@ -13,6 +13,8 @@
 #include "../cpp/services/SyncService.h"
 #include "../cpp/viewmodels/TaskListViewModel.h"
 
+using namespace Qt::StringLiterals;
+
 int main(int argc, char *argv[])
 {
     QGuiApplication app(argc, argv);
@@ -59,7 +61,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("authService", &authService);
     engine.rootContext()->setContextProperty("syncService", &syncService);
 
-    const QUrl url(u"qrc:/qml/Main.qml"_qs);
+    const QUrl url(u"qrc:/qml/Main.qml"_s);
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreationFailed,
         &app, []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
