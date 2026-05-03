@@ -885,250 +885,821 @@ Rectangle {
         id: newListPopup
         parent: Overlay.overlay
         modal: true
-        width: 740
-        height: 426
+        width: 520
         padding: 0
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
-        property string selectedColor: "#3b82f6"
-        property string selectedFolder: "None"
-        property string selectedListType: "Task List"
 
-        Overlay.modal: Rectangle {
-            color: "#88000000"
-        }
+        // State
+        property string selectedColor: ""        // "" = none/default
+        property string selectedFolder: "None"
+        property string selectedListType: "Task List"  // "Task List" | "Notes List"
+        property int    selectedViewType: 0            // 0=List 1=Board 2=Timeline
+        property string selectedSmartList: "All tasks" // "All tasks" | "No"
+        property string selectedIcon: "≡"             // emoji or symbol
+        property bool   showIconPicker: false
+
+        Overlay.modal: Rectangle { color: "#99000000" }
 
         onOpened: {
-            newListInput.text = ""
+            newListNameInput.text = ""
+            selectedColor = ""
             selectedFolder = "None"
             selectedListType = "Task List"
-            newListInput.forceActiveFocus()
+            selectedViewType = 0
+            selectedSmartList = "All tasks"
+            selectedIcon = "≡"
+            showIconPicker = false
+            newListNameInput.forceActiveFocus()
         }
 
         background: Rectangle {
-            color: "#252525"
+            color: "#252628"
             radius: 14
-            border.color: "#3b3b3b"
+            border.color: "#383838"
             border.width: 1
         }
 
-        RowLayout {
+        ColumnLayout {
             anchors.fill: parent
+            anchors.margins: 0
             spacing: 0
 
-            ColumnLayout {
-                Layout.preferredWidth: 380
-                Layout.fillHeight: true
-                Layout.margins: 26
-                spacing: 16
-
-                Text {
-                    text: "Add List"
-                    color: "#f5f5f5"
-                    font.pixelSize: 18
-                    font.bold: true
-                    font.family: Theme.fontFamily
-                    Layout.alignment: Qt.AlignHCenter
-                }
-
-                TextField {
-                    id: newListInput
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 38
-                    placeholderText: "Name"
-                    color: "#f5f5f5"
-                    placeholderTextColor: "#777777"
-                    leftPadding: 42
-                    font.family: Theme.fontFamily
-                    background: Rectangle {
-                        color: "#1b1b1b"
-                        radius: 8
-                        border.color: "#3b3b3b"
-                        border.width: 1
-
-                        SidebarIcon {
-                            anchors.left: parent.left
-                            anchors.leftMargin: 13
-                            anchors.verticalCenter: parent.verticalCenter
-                            width: 16
-                            height: 16
-                            iconName: "list"
-                            iconColor: "#858585"
-                            strokeWidth: 1.6
-                        }
-                    }
-                    onAccepted: newListPopup.createList()
-                }
+            // ── Header ──────────────────────────────────────────────────
+            Rectangle {
+                Layout.fillWidth: true
+                height: 52
+                color: "transparent"
 
                 RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 14
+                    anchors.fill: parent
+                    anchors.leftMargin: 22
+                    anchors.rightMargin: 22
+
                     Text {
-                        text: "List Color"
-                        color: "#dcdcdc"
-                        font.pixelSize: 13
+                        text: "Add List"
+                        color: "#f0f0f0"
+                        font.pixelSize: 16
+                        font.bold: true
                         font.family: Theme.fontFamily
-                        Layout.preferredWidth: 92
-                    }
-                    RowLayout {
-                        spacing: 8
-                        Repeater {
-                            model: root.pickerColors
-                            delegate: Rectangle {
-                                width: 18
-                                height: 18
-                                radius: 9
-                                color: modelData
-                                border.color: newListPopup.selectedColor === modelData ? "#ffffff" : "transparent"
-                                border.width: 2
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: newListPopup.selectedColor = modelData
-                                }
-                            }
-                        }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 14
-                    Text { text: "View Type"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 92 }
-                    Repeater {
-                        model: [
-                            { iconName: "all", premium: false },
-                            { iconName: "matrix", premium: false },
-                            { iconName: "summary", premium: true }
-                        ]
-                        delegate: Rectangle {
-                            width: 52
-                            height: 38
-                            radius: 8
-                            color: index === 0 ? Theme.primary + "22" : "#2b2b2b"
-                            border.color: index === 0 ? Theme.primary : "transparent"
-                            SidebarIcon {
-                                anchors.centerIn: parent
-                                width: 18
-                                height: 18
-                                iconName: modelData.iconName
-                                iconColor: index === 0 ? Theme.primary : "#8e8e8e"
-                                strokeWidth: 1.7
-                            }
-                            Rectangle {
-                                visible: modelData.premium
-                                anchors.right: parent.right
-                                anchors.top: parent.top
-                                anchors.margins: -3
-                                width: 12
-                                height: 12
-                                radius: 6
-                                color: "#facc15"
-                            }
-                        }
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 14
-                    Text { text: "Folder"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 92 }
-                    SidebarComboBox {
-                        id: newListFolderCombo
                         Layout.fillWidth: true
-                        model: root.folderOptions()
-                        currentIndex: Math.max(0, root.folderOptions().indexOf(newListPopup.selectedFolder))
-                        onActivated: {
-                            if (currentText === "+ New Folder") {
-                                currentIndex = Math.max(0, root.folderOptions().indexOf(newListPopup.selectedFolder))
-                                openCenteredPopup(newFolderPopup)
-                            } else {
-                                newListPopup.selectedFolder = currentText
-                            }
-                        }
                     }
-                }
 
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 14
-                    Text { text: "List Type"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 92 }
-                    SidebarComboBox {
-                        Layout.fillWidth: true
-                        model: ["Task List", "Notes List"]
-                        currentIndex: newListPopup.selectedListType === "Notes List" ? 1 : 0
-                        onActivated: newListPopup.selectedListType = currentText
-                    }
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 14
-                    Text { text: "Show in Smart List"; color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.preferredWidth: 130 }
-                    SidebarComboBox { Layout.fillWidth: true; model: ["All tasks", "No"] }
-                }
-
-                Item { Layout.fillHeight: true }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 10
-                    Item { Layout.fillWidth: true }
                     Rectangle {
-                        width: 76
-                        height: 30
-                        radius: 7
-                        color: cancelNewListHover.containsMouse ? "#333333" : "transparent"
-                        border.color: "#3b3b3b"
-                        Text { anchors.centerIn: parent; text: "Cancel"; color: "#bdbdbd"; font.pixelSize: 13; font.family: Theme.fontFamily }
-                        HoverHandler { id: cancelNewListHover }
+                        width: 26; height: 26; radius: 13
+                        color: closeBtnHover.containsMouse ? "#383838" : "transparent"
+                        Text { anchors.centerIn: parent; text: "×"; color: "#aaaaaa"; font.pixelSize: 18 }
+                        HoverHandler { id: closeBtnHover }
                         MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: newListPopup.close() }
-                    }
-                    Rectangle {
-                        width: 76
-                        height: 30
-                        radius: 7
-                        color: newListInput.text.trim() === "" ? "#303030" : Theme.primary
-                        opacity: newListInput.text.trim() === "" ? 0.65 : 1
-                        Text { anchors.centerIn: parent; text: "Add"; color: "#ffffff"; font.pixelSize: 13; font.family: Theme.fontFamily }
-                        MouseArea { anchors.fill: parent; cursorShape: newListInput.text.trim() === "" ? Qt.ArrowCursor : Qt.PointingHandCursor; onClicked: newListPopup.createList() }
                     }
                 }
             }
 
-            Rectangle {
+            Rectangle { Layout.fillWidth: true; height: 1; color: "#333333" }
+
+            // ── Two-column body ─────────────────────────────────────────
+            RowLayout {
                 Layout.fillWidth: true
-                Layout.fillHeight: true
-                color: "#202020"
-                radius: 0
-                clip: true
+                spacing: 0
+
+                // LEFT: form
+                ColumnLayout {
+                    Layout.preferredWidth: 280
+                    Layout.fillHeight: true
+                    Layout.margins: 20
+                    spacing: 14
+
+                    // Name row: icon picker + text field
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        // Icon button
+                        Rectangle {
+                            width: 36; height: 36; radius: 8
+                            color: iconBtnHover.containsMouse ? "#333333" : "#2a2a2a"
+                            border.color: newListPopup.showIconPicker ? Theme.primary : "#3a3a3a"
+                            border.width: 1
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: newListPopup.selectedIcon
+                                font.pixelSize: 16
+                                color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#cccccc"
+                            }
+
+                            HoverHandler { id: iconBtnHover }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: newListPopup.showIconPicker = !newListPopup.showIconPicker
+                            }
+                        }
+
+                        // Name input
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 36
+                            radius: 8
+                            color: "#1e1e1e"
+                            border.color: newListNameInput.activeFocus ? Theme.primary : "#3a3a3a"
+                            border.width: 1
+
+                            TextField {
+                                id: newListNameInput
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                placeholderText: "List name"
+                                color: "#f0f0f0"
+                                placeholderTextColor: "#666666"
+                                font.pixelSize: 13
+                                font.family: Theme.fontFamily
+                                background: null
+                                onAccepted: newListPopup.createList()
+                            }
+                        }
+                    }
+
+                    // Icon picker panel
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: newListPopup.showIconPicker ? iconPickerCol.implicitHeight + 16 : 0
+                        visible: newListPopup.showIconPicker
+                        color: "#1e1e1e"
+                        radius: 10
+                        border.color: "#333333"
+                        clip: true
+
+                        Behavior on height { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+
+                        ColumnLayout {
+                            id: iconPickerCol
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            anchors.margins: 8
+                            spacing: 8
+
+                            // Symbol row
+                            Flow {
+                                Layout.fillWidth: true
+                                spacing: 4
+
+                                Repeater {
+                                    model: ["≡", "★", "♥", "⚡", "🎯", "📚", "💡", "🔧", "🎨", "🏆",
+                                            "📝", "💼", "🏠", "🎵", "🌟", "💪", "🚀", "🎮", "🌈", "🔥",
+                                            "💰", "🏋️", "✈️", "🌿", "🎭", "📊", "🔬", "🎓", "🏃", "💻"]
+
+                                    Rectangle {
+                                        width: 32; height: 32; radius: 6
+                                        color: newListPopup.selectedIcon === modelData
+                                            ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "33" : Theme.primary + "33")
+                                            : (iconItemHover.containsMouse ? "#2e2e2e" : "transparent")
+                                        border.color: newListPopup.selectedIcon === modelData
+                                                    ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                    : "transparent"
+                                        border.width: 1
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: modelData
+                                            font.pixelSize: 15
+                                            color: "#eeeeee"
+                                        }
+
+                                        HoverHandler { id: iconItemHover }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                newListPopup.selectedIcon = modelData
+                                                newListPopup.showIconPicker = false
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // List Color
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "Color"
+                            color: "#999999"
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 72
+                        }
+
+                        Row {
+                            spacing: 6
+
+                            // "None" slot
+                            Rectangle {
+                                width: 20; height: 20; radius: 10
+                                color: "#2a2a2a"
+                                border.color: newListPopup.selectedColor === "" ? "#ffffff" : "#555555"
+                                border.width: newListPopup.selectedColor === "" ? 2 : 1
+
+                                Text { anchors.centerIn: parent; text: "×"; color: "#777777"; font.pixelSize: 12 }
+
+                                MouseArea {
+                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                    onClicked: newListPopup.selectedColor = ""
+                                }
+                            }
+
+                            Repeater {
+                                model: ["#ef4444","#fb923c","#facc15","#4ade80","#22c55e",
+                                        "#3b82f6","#6366f1","#a855f7","#ec4899","#f43f5e"]
+
+                                Rectangle {
+                                    width: 20; height: 20; radius: 10
+                                    color: modelData
+                                    border.color: newListPopup.selectedColor === modelData ? "#ffffff" : "transparent"
+                                    border.width: 2
+
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: 8; height: 8; radius: 4
+                                        color: "white"
+                                        visible: newListPopup.selectedColor === modelData
+                                        opacity: 0.9
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: newListPopup.selectedColor = modelData
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // View Type
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "View"
+                            color: "#999999"
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 72
+                        }
+
+                        Row {
+                            spacing: 6
+
+                            Repeater {
+                                model: [
+                                    { label: "List",     icon: "all",     idx: 0 },
+                                    { label: "Board",    icon: "matrix",  idx: 1 },
+                                    { label: "Timeline", icon: "summary", idx: 2 }
+                                ]
+
+                                Rectangle {
+                                    width: 64; height: 44; radius: 8
+                                    color: newListPopup.selectedViewType === modelData.idx
+                                        ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "22" : Theme.primary + "22")
+                                        : (viewHover.containsMouse ? "#2a2a2a" : "#222222")
+                                    border.color: newListPopup.selectedViewType === modelData.idx
+                                                ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                : "#333333"
+                                    border.width: 1
+
+                                    ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 3
+
+                                        SidebarIcon {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            width: 16; height: 16
+                                            iconName: modelData.icon
+                                            iconColor: newListPopup.selectedViewType === modelData.idx
+                                                    ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                    : "#888888"
+                                            strokeWidth: 1.6
+                                        }
+
+                                        Text {
+                                            Layout.alignment: Qt.AlignHCenter
+                                            text: modelData.label
+                                            color: newListPopup.selectedViewType === modelData.idx
+                                                ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                : "#888888"
+                                            font.pixelSize: 10
+                                            font.family: Theme.fontFamily
+                                        }
+                                    }
+
+                                    HoverHandler { id: viewHover }
+                                    MouseArea {
+                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: newListPopup.selectedViewType = modelData.idx
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Folder
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "Folder"
+                            color: "#999999"
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 72
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 32; radius: 7
+                            color: folderComboHover.containsMouse ? "#2a2a2a" : "#1e1e1e"
+                            border.color: "#3a3a3a"; border.width: 1
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 8
+                                spacing: 6
+
+                                SidebarIcon {
+                                    width: 13; height: 13
+                                    iconName: "folder"
+                                    iconColor: "#888888"
+                                    strokeWidth: 1.5
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: newListPopup.selectedFolder
+                                    color: newListPopup.selectedFolder === "None" ? "#666666" : "#e0e0e0"
+                                    font.pixelSize: 12
+                                    font.family: Theme.fontFamily
+                                    elide: Text.ElideRight
+                                }
+
+                                Text { text: "⌄"; color: "#666666"; font.pixelSize: 12 }
+                            }
+
+                            HoverHandler { id: folderComboHover }
+                            MouseArea {
+                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                onClicked: folderDropdown.open()
+                            }
+
+                            Popup {
+                                id: folderDropdown
+                                y: parent.height + 4
+                                width: parent.width
+                                padding: 4
+                                closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+                                background: Rectangle {
+                                    color: "#252525"; radius: 8
+                                    border.color: "#3a3a3a"; border.width: 1
+                                }
+
+                                ColumnLayout {
+                                    width: parent.width
+                                    spacing: 2
+
+                                    Repeater {
+                                        model: {
+                                            var opts = ["None"]
+                                            var folders = taskListViewModel.getAllFolders()
+                                            for (var i = 0; i < folders.length; i++) opts.push(folders[i])
+                                            opts.push("+ New Folder")
+                                            return opts
+                                        }
+
+                                        Rectangle {
+                                            Layout.fillWidth: true
+                                            height: 28; radius: 6
+                                            color: folderItemHover.containsMouse ? "#333333" : "transparent"
+
+                                            Text {
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                anchors.left: parent.left; anchors.leftMargin: 10
+                                                text: modelData
+                                                color: modelData === "+ New Folder" ? Theme.primary
+                                                    : (newListPopup.selectedFolder === modelData ? "#ffffff" : "#cccccc")
+                                                font.pixelSize: 12
+                                                font.family: Theme.fontFamily
+                                            }
+
+                                            Text {
+                                                visible: newListPopup.selectedFolder === modelData && modelData !== "+ New Folder"
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                anchors.right: parent.right; anchors.rightMargin: 10
+                                                text: "✓"; color: Theme.primary; font.pixelSize: 11
+                                            }
+
+                                            HoverHandler { id: folderItemHover }
+                                            MouseArea {
+                                                anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    if (modelData === "+ New Folder") {
+                                                        folderDropdown.close()
+                                                        openCenteredPopup(newFolderPopup)
+                                                    } else {
+                                                        newListPopup.selectedFolder = modelData
+                                                        folderDropdown.close()
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // List Type
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "Type"
+                            color: "#999999"
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 72
+                        }
+
+                        Row {
+                            spacing: 6
+
+                            Repeater {
+                                model: ["Task List", "Notes List"]
+
+                                Rectangle {
+                                    height: 28
+                                    width: typeLabel.implicitWidth + 24
+                                    radius: 6
+                                    color: newListPopup.selectedListType === modelData
+                                        ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "22" : Theme.primary + "22")
+                                        : (typeHover.containsMouse ? "#2a2a2a" : "#1e1e1e")
+                                    border.color: newListPopup.selectedListType === modelData
+                                                ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                : "#383838"
+                                    border.width: 1
+
+                                    Text {
+                                        id: typeLabel
+                                        anchors.centerIn: parent
+                                        text: modelData
+                                        color: newListPopup.selectedListType === modelData
+                                            ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                            : "#888888"
+                                        font.pixelSize: 11
+                                        font.family: Theme.fontFamily
+                                    }
+
+                                    HoverHandler { id: typeHover }
+                                    MouseArea {
+                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: newListPopup.selectedListType = modelData
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Show in Smart List
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 10
+
+                        Text {
+                            text: "Smart List"
+                            color: "#999999"
+                            font.pixelSize: 12
+                            font.family: Theme.fontFamily
+                            Layout.preferredWidth: 72
+                        }
+
+                        Row {
+                            spacing: 6
+
+                            Repeater {
+                                model: ["All tasks", "No"]
+
+                                Rectangle {
+                                    height: 28
+                                    width: smartLabel.implicitWidth + 24
+                                    radius: 6
+                                    color: newListPopup.selectedSmartList === modelData
+                                        ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "22" : Theme.primary + "22")
+                                        : (smartHover.containsMouse ? "#2a2a2a" : "#1e1e1e")
+                                    border.color: newListPopup.selectedSmartList === modelData
+                                                ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                                : "#383838"
+                                    border.width: 1
+
+                                    Text {
+                                        id: smartLabel
+                                        anchors.centerIn: parent
+                                        text: modelData
+                                        color: newListPopup.selectedSmartList === modelData
+                                            ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary)
+                                            : "#888888"
+                                        font.pixelSize: 11
+                                        font.family: Theme.fontFamily
+                                    }
+
+                                    HoverHandler { id: smartHover }
+                                    MouseArea {
+                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                        onClicked: newListPopup.selectedSmartList = modelData
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Item { Layout.fillHeight: true }
+
+                    // Buttons
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Item { Layout.fillWidth: true }
+
+                        Rectangle {
+                            width: 80; height: 32; radius: 8
+                            color: cancelHoverNL.containsMouse ? "#333333" : "#2a2a2a"
+                            border.color: "#3a3a3a"; border.width: 1
+
+                            Text { anchors.centerIn: parent; text: "Cancel"; color: "#bbbbbb"; font.pixelSize: 13; font.family: Theme.fontFamily }
+                            HoverHandler { id: cancelHoverNL }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: newListPopup.close() }
+                        }
+
+                        Rectangle {
+                            width: 80; height: 32; radius: 8
+                            color: {
+                                if (newListNameInput.text.trim() === "") return "#2a2a2a"
+                                var c = newListPopup.selectedColor !== "" ? newListPopup.selectedColor : Theme.primary
+                                return addHoverNL.containsMouse ? Qt.darker(c, 1.1) : c
+                            }
+                            opacity: newListNameInput.text.trim() === "" ? 0.5 : 1.0
+
+                            Text { anchors.centerIn: parent; text: "Add"; color: "white"; font.pixelSize: 13; font.bold: true; font.family: Theme.fontFamily }
+                            HoverHandler { id: addHoverNL }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: newListNameInput.text.trim() === "" ? Qt.ArrowCursor : Qt.PointingHandCursor
+                                onClicked: newListPopup.createList()
+                            }
+                        }
+                    }
+                }
+
+                // RIGHT: live preview
                 Rectangle {
-                    anchors.centerIn: parent
-                    width: 270
-                    height: 300
-                    radius: 12
-                    color: "#242424"
-                    opacity: 0.9
-                    border.color: "#2f2f2f"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.minimumHeight: 320
+                    color: "#1a1a1a"
+                    radius: 0
+                    clip: true
+
+                    // Subtle grid background
+                    Canvas {
+                        anchors.fill: parent
+                        onPaint: {
+                            var ctx = getContext("2d")
+                            ctx.clearRect(0, 0, width, height)
+                            ctx.strokeStyle = "#242424"
+                            ctx.lineWidth = 1
+                            for (var x = 0; x < width; x += 20) {
+                                ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, height); ctx.stroke()
+                            }
+                            for (var y = 0; y < height; y += 20) {
+                                ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(width, y); ctx.stroke()
+                            }
+                        }
+                    }
 
                     ColumnLayout {
-                        anchors.fill: parent
-                        anchors.margins: 18
-                        spacing: 12
+                        anchors.centerIn: parent
+                        width: Math.min(parent.width - 32, 200)
+                        spacing: 0
 
+                        // Mini list header
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 36
+                            radius: 8
+                            color: "#242424"
+                            border.color: "#303030"
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10
+                                anchors.rightMargin: 10
+                                spacing: 7
+
+                                Rectangle {
+                                    width: 16; height: 16; radius: 4
+                                    color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "33" : "#2a2a2a"
+                                    border.color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#444444"
+                                    border.width: 1
+
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: newListPopup.selectedIcon
+                                        font.pixelSize: 9
+                                        color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#888888"
+                                    }
+                                }
+
+                                Text {
+                                    Layout.fillWidth: true
+                                    text: newListNameInput.text.trim() === "" ? "List name" : newListNameInput.text.trim()
+                                    color: newListNameInput.text.trim() === "" ? "#555555" : "#dddddd"
+                                    font.pixelSize: 12
+                                    font.bold: true
+                                    font.family: Theme.fontFamily
+                                    elide: Text.ElideRight
+                                }
+
+                                // View type mini badge
+                                Rectangle {
+                                    height: 16
+                                    width: viewBadge.implicitWidth + 10
+                                    radius: 4
+                                    color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "22" : "#2a2a2a"
+
+                                    Text {
+                                        id: viewBadge
+                                        anchors.centerIn: parent
+                                        text: ["List","Board","Timeline"][newListPopup.selectedViewType]
+                                        color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#666666"
+                                        font.pixelSize: 9
+                                        font.family: Theme.fontFamily
+                                    }
+                                }
+                            }
+                        }
+
+                        // Preview tasks (list or board style)
+                        Item {
+                            Layout.fillWidth: true
+                            height: newListPopup.selectedViewType === 1 ? boardPreview.height : listPreview.height
+
+                            // List preview
+                            ColumnLayout {
+                                id: listPreview
+                                width: parent.width
+                                spacing: 2
+                                visible: newListPopup.selectedViewType !== 1
+                                anchors.top: parent.top
+                                anchors.topMargin: 6
+
+                                Repeater {
+                                    model: newListPopup.selectedListType === "Notes List"
+                                        ? ["📝 Note title", "Another note..."]
+                                        : ["Task one", "Task two", "Task three"]
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        height: 26; radius: 5
+                                        color: "#242424"
+                                        border.color: "#2e2e2e"; border.width: 1
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 8
+                                            anchors.rightMargin: 8
+                                            spacing: 6
+
+                                            Rectangle {
+                                                width: 11; height: 11; radius: 3
+                                                color: "transparent"
+                                                border.color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#444444"
+                                                border.width: 1
+                                                visible: newListPopup.selectedListType !== "Notes List"
+                                            }
+
+                                            Rectangle {
+                                                Layout.fillWidth: true
+                                                height: 6; radius: 3
+                                                color: index === 0
+                                                    ? (newListPopup.selectedColor !== "" ? newListPopup.selectedColor + "66" : "#3b82f666")
+                                                    : "#2e2e2e"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Board preview
+                            Row {
+                                id: boardPreview
+                                width: parent.width
+                                spacing: 4
+                                visible: newListPopup.selectedViewType === 1
+                                anchors.top: parent.top
+                                anchors.topMargin: 6
+
+                                Repeater {
+                                    model: ["To Do", "Done"]
+
+                                    Rectangle {
+                                        width: (boardPreview.width - 4) / 2
+                                        height: 60; radius: 5
+                                        color: "#1e1e1e"
+                                        border.color: "#2e2e2e"; border.width: 1
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 6
+                                            spacing: 4
+
+                                            Text {
+                                                text: modelData
+                                                color: newListPopup.selectedColor !== "" ? newListPopup.selectedColor : "#666666"
+                                                font.pixelSize: 9; font.bold: true
+                                                font.family: Theme.fontFamily
+                                            }
+
+                                            Rectangle {
+                                                Layout.fillWidth: true
+                                                height: 18; radius: 3
+                                                color: "#2a2a2a"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Type + Smart List badges
                         RowLayout {
                             Layout.fillWidth: true
-                            SidebarIcon { Layout.preferredWidth: 16; Layout.preferredHeight: 16; iconName: "list"; iconColor: newListPopup.selectedColor }
-                            Text { text: newListInput.text.trim() === "" ? "Name" : newListInput.text.trim(); color: "#dcdcdc"; font.pixelSize: 13; font.family: Theme.fontFamily; Layout.fillWidth: true; elide: Text.ElideRight }
-                        }
-                        Rectangle { Layout.fillWidth: true; height: 14; radius: 4; color: "#303030" }
-                        Repeater {
-                            model: 8
+                            Layout.topMargin: 8
+                            spacing: 4
+
                             Rectangle {
-                                Layout.fillWidth: true
-                                height: 8
+                                height: 16
+                                width: typeBadge.implicitWidth + 10
                                 radius: 4
-                                color: index % 3 === 0 ? newListPopup.selectedColor : "#343434"
-                                opacity: index % 3 === 0 ? 0.9 : 1
+                                color: "#242424"
+
+                                Text {
+                                    id: typeBadge
+                                    anchors.centerIn: parent
+                                    text: newListPopup.selectedListType
+                                    color: "#666666"
+                                    font.pixelSize: 9
+                                    font.family: Theme.fontFamily
+                                }
+                            }
+
+                            Rectangle {
+                                height: 16
+                                width: smartBadge.implicitWidth + 10
+                                radius: 4
+                                color: newListPopup.selectedSmartList === "All tasks" ? "#1e3a2a" : "#242424"
+
+                                Text {
+                                    id: smartBadge
+                                    anchors.centerIn: parent
+                                    text: newListPopup.selectedSmartList === "All tasks" ? "Smart ✓" : "Not in Smart"
+                                    color: newListPopup.selectedSmartList === "All tasks" ? "#4ade80" : "#555555"
+                                    font.pixelSize: 9
+                                    font.family: Theme.fontFamily
+                                }
+                            }
+
+                            Rectangle {
+                                visible: newListPopup.selectedFolder !== "None"
+                                height: 16
+                                width: folderBadge.implicitWidth + 10
+                                radius: 4
+                                color: "#242424"
+
+                                Text {
+                                    id: folderBadge
+                                    anchors.centerIn: parent
+                                    text: "📁 " + newListPopup.selectedFolder
+                                    color: "#666666"
+                                    font.pixelSize: 9
+                                    font.family: Theme.fontFamily
+                                }
                             }
                         }
                     }
@@ -1137,11 +1708,15 @@ Rectangle {
         }
 
         function createList() {
-            var name = newListInput.text.trim()
+            var name = newListNameInput.text.trim()
             if (name === "") return
-            taskListViewModel.createList(name, newListPopup.selectedColor, newListPopup.selectedFolder === "None" ? "" : newListPopup.selectedFolder, newListPopup.selectedListType)
+            taskListViewModel.createList(
+                name,
+                newListPopup.selectedColor,
+                newListPopup.selectedFolder === "None" ? "" : newListPopup.selectedFolder,
+                newListPopup.selectedListType
+            )
             taskListViewModel.setFilterList(name)
-            newListInput.text = ""
             newListPopup.close()
         }
     }
