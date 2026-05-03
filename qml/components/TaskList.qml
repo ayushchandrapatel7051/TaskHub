@@ -861,21 +861,53 @@ Rectangle {
             return result
         }
 
+        function selectNoteAt(idx) {
+            if (idx < 0 || idx >= notesList.length) return
+            selectedNote = idx
+            editingContent = notesList[idx].content
+            taskListViewModel.selectTask(notesList[idx].index)
+        }
+
+        function refreshNotes() {
+            var currentId = ""
+            if (selectedNote >= 0 && selectedNote < notesList.length) {
+                currentId = notesList[selectedNote].id
+            }
+            notesList = notesRoot.loadNotes()
+            if (notesList.length === 0) {
+                selectedNote = -1
+                taskListViewModel.clearSelection()
+                return
+            }
+            if (currentId !== "") {
+                for (var i = 0; i < notesList.length; i++) {
+                    if (notesList[i].id === currentId) {
+                        selectNoteAt(i)
+                        return
+                    }
+                }
+            }
+            if (selectedNote >= 0 && selectedNote < notesList.length) {
+                selectNoteAt(selectedNote)
+                return
+            }
+            selectNoteAt(0)
+        }
+
         property int selectedNote: -1
         property string editingContent: ""
 
         Connections {
             target: taskListViewModel
-            function onTasksModified() { notesList = notesRoot.loadNotes() }
+            function onTasksModified() { refreshNotes() }
             function onFilterChanged() {
                 Qt.callLater(function() {
-                    notesList = notesRoot.loadNotes()
-                    selectedNote = -1
+                    refreshNotes()
                 })
             }
         }
 
-        Component.onCompleted: notesList = loadNotes()
+        Component.onCompleted: refreshNotes()
 
         RowLayout {
             anchors.fill: parent; spacing: 0
@@ -895,8 +927,12 @@ Rectangle {
                             MouseArea { anchors.fill:parent; cursorShape:Qt.PointingHandCursor
                                 onClicked: {
                                     taskListViewModel.addTask("New Note","",0,"",[],(listName===""?"Inbox":listName))
-                                    notesList = notesRoot.loadNotes()
-                                    selectedNote = notesList.length - 1
+                                    Qt.callLater(function() {
+                                        refreshNotes()
+                                        if (notesList.length > 0) {
+                                            selectNoteAt(notesList.length - 1)
+                                        }
+                                    })
                                 }
                             }
                         }
@@ -921,8 +957,7 @@ Rectangle {
                             HoverHandler{id:noteItemHov}
                             MouseArea { anchors.fill:parent; cursorShape:Qt.PointingHandCursor
                                 onClicked: {
-                                    selectedNote = index
-                                    editingContent = notesList[index].content
+                                    selectNoteAt(index)
                                 }
                             }
                         }
@@ -941,15 +976,51 @@ Rectangle {
                     ColumnLayout {
                         anchors.fill:parent; anchors.margins:24; spacing:16
 
-                        // Note title
-                        TextField {
-                            Layout.fillWidth:true
-                            text: selectedNote>=0&&selectedNote<notesList.length?notesList[selectedNote].title:""
-                            color:"#f5f5f5"; font.pixelSize:22; font.bold:true; font.family:Theme.fontFamily
-                            background:null; leftPadding:0; rightPadding:0
-                            onEditingFinished: {
-                                if(selectedNote>=0&&selectedNote<notesList.length)
-                                    taskListViewModel.renameTask(notesList[selectedNote].index, text)
+                        RowLayout {
+                            Layout.fillWidth: true
+                            spacing: 10
+
+                            // Note title
+                            TextField {
+                                Layout.fillWidth:true
+                                text: selectedNote>=0&&selectedNote<notesList.length?notesList[selectedNote].title:""
+                                color:"#f5f5f5"; font.pixelSize:22; font.bold:true; font.family:Theme.fontFamily
+                                background:null; leftPadding:0; rightPadding:0
+                                onEditingFinished: {
+                                    if(selectedNote>=0&&selectedNote<notesList.length)
+                                        taskListViewModel.renameTask(notesList[selectedNote].index, text)
+                                }
+                            }
+
+                            Rectangle {
+                                width: 32
+                                height: 32
+                                radius: 6
+                                color: deleteNoteHov.containsMouse ? "#3a2323" : "transparent"
+                                visible: selectedNote >= 0 && selectedNote < notesList.length
+
+                                SidebarIcon {
+                                    anchors.centerIn: parent
+                                    width: 16
+                                    height: 16
+                                    iconName: "trash"
+                                    iconColor: deleteNoteHov.containsMouse ? Theme.accentRed : "#8b8f98"
+                                    strokeWidth: 1.6
+                                }
+
+                                HoverHandler { id: deleteNoteHov }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (selectedNote < 0 || selectedNote >= notesList.length) return
+                                        var idx = notesList[selectedNote].index
+                                        taskListViewModel.softDeleteTask(idx)
+                                        Qt.callLater(function() {
+                                            refreshNotes()
+                                        })
+                                    }
+                                }
                             }
                         }
 

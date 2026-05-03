@@ -11,6 +11,8 @@ QString normalizedListName(const QString &listName) {
 
 TaskListViewModel::TaskListViewModel(TaskService *taskService, QObject *parent)
     : QAbstractListModel(parent), m_taskService(taskService) {
+  connect(m_taskService, &TaskService::tasksChanged, this,
+          &TaskListViewModel::onTasksChanged);
   connect(m_taskService, &TaskService::listsChanged, this,
           &TaskListViewModel::refreshNotesListCache);
   refreshNotesListCache();
