@@ -112,6 +112,18 @@ void LocalCacheService::createTables() {
   listQuery.bindValue(":createdAt",
                       QDateTime::currentDateTime().toString(Qt::ISODate));
   listQuery.exec();
+
+  QSqlQuery folderQuery(m_db);
+  folderQuery.prepare(
+      "INSERT OR IGNORE INTO folders (name, isPinned, updatedAt, createdAt) "
+      "VALUES (:name, :isPinned, :updatedAt, :createdAt)");
+  folderQuery.bindValue(":name", "Archive");
+  folderQuery.bindValue(":isPinned", 0);
+  folderQuery.bindValue(":updatedAt",
+                        QDateTime::currentDateTime().toString(Qt::ISODate));
+  folderQuery.bindValue(":createdAt",
+                        QDateTime::currentDateTime().toString(Qt::ISODate));
+  folderQuery.exec();
 }
 
 namespace {
@@ -412,8 +424,8 @@ QStringList LocalCacheService::getRootLists() {
   QSqlQuery query(m_db);
   query.prepare(
       "SELECT name FROM lists WHERE name != 'Inbox' AND "
-      "trim(coalesce(folderName, '')) = '' "
-      "ORDER BY isArchived ASC, isPinned DESC, coalesce(updatedAt, createdAt) DESC");
+  "trim(coalesce(folderName, '')) = '' AND isArchived = 0 "
+  "ORDER BY isPinned DESC, coalesce(updatedAt, createdAt) DESC");
   if (query.exec()) {
     while (query.next()) {
       QString name = query.value("name").toString().trimmed();
@@ -427,9 +439,15 @@ QStringList LocalCacheService::getRootLists() {
 QStringList LocalCacheService::getListsForFolder(const QString &folderName) {
   QStringList result;
   QSqlQuery query(m_db);
-  query.prepare("SELECT name FROM lists WHERE folderName = :folderName AND "
-                "name != 'Inbox' "
-                "ORDER BY isArchived ASC, isPinned DESC, coalesce(updatedAt, createdAt) DESC");
+  if (folderName.trimmed() == QLatin1String("Archive")) {
+    query.prepare("SELECT name FROM lists WHERE folderName = :folderName AND "
+                  "name != 'Inbox' AND isArchived = 1 "
+                  "ORDER BY isPinned DESC, coalesce(updatedAt, createdAt) DESC");
+  } else {
+    query.prepare("SELECT name FROM lists WHERE folderName = :folderName AND "
+                  "name != 'Inbox' AND isArchived = 0 "
+                  "ORDER BY isPinned DESC, coalesce(updatedAt, createdAt) DESC");
+  }
   query.bindValue(":folderName", folderName.trimmed());
   if (query.exec()) {
     while (query.next()) {
@@ -724,7 +742,11 @@ bool LocalCacheService::duplicateListWithTasks(const QString &listName,
 
 QStringList LocalCacheService::getAllFolders() {
   QStringList result;
-  QSqlQuery query("SELECT name FROM folders ORDER BY isPinned DESC, coalesce(updatedAt, createdAt) DESC", m_db);
+  QSqlQuery query(
+      "SELECT name FROM folders "
+      "ORDER BY CASE WHEN name = 'Archive' THEN 1 ELSE 0 END, "
+      "isPinned DESC, coalesce(updatedAt, createdAt) DESC",
+      m_db);
   while (query.next()) {
     QString name = query.value("name").toString().trimmed();
     if (!name.isEmpty()) {
@@ -804,7 +826,7 @@ bool LocalCacheService::renameFolder(const QString &oldName,
 
 bool LocalCacheService::deleteFolder(const QString &folderName) {
   QString name = folderName.trimmed();
-  if (name.isEmpty())
+  if (name.isEmpty() || name == QLatin1String("Archive"))
     return false;
 
   if (!m_db.transaction())

@@ -382,8 +382,15 @@ QStringList TaskListViewModel::getAllLists() const {
 
 QStringList TaskListViewModel::getVisibleLists() const {
   QStringList lists = m_taskService->getLists();
-  lists.removeAll(QStringLiteral("Inbox"));
-  return lists;
+  QStringList result;
+  for (const QString &name : lists) {
+    if (name == QStringLiteral("Inbox"))
+      continue;
+    if (m_taskService->getListArchived(name))
+      continue;
+    result.append(name);
+  }
+  return result;
 }
 
 QStringList TaskListViewModel::getRootLists() const {
@@ -422,6 +429,9 @@ bool TaskListViewModel::renameList(const QString &oldName,
 
 bool TaskListViewModel::deleteList(const QString &listName) {
   if (m_taskService->deleteList(listName)) {
+    if (m_filterList.compare(listName, Qt::CaseInsensitive) == 0) {
+      m_filterList = "Inbox";
+    }
     refreshNotesListCache();
     emit filterChanged();
     emit tasksModified();
@@ -463,7 +473,19 @@ bool TaskListViewModel::archiveList(const QString &listName) {
     return false;
 
   bool archived = m_taskService->getListArchived(name);
-  if (m_taskService->setListArchived(name, !archived)) {
+  if (archived) {
+    if (m_taskService->setListArchived(name, false) &&
+        m_taskService->updateListFolder(name, "")) {
+      emit filterChanged();
+      emit tasksModified();
+      return true;
+    }
+    return false;
+  }
+
+  m_taskService->createFolder(QStringLiteral("Archive"));
+  if (m_taskService->setListArchived(name, true) &&
+      m_taskService->updateListFolder(name, QStringLiteral("Archive"))) {
     emit filterChanged();
     emit tasksModified();
     return true;

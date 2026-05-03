@@ -31,7 +31,10 @@ Rectangle {
 
     TapHandler {
         acceptedButtons: Qt.LeftButton
-        onTapped: taskListViewModel.selectTask(root.taskIndex)
+        onTapped: {
+            taskListViewModel.selectTask(root.taskIndex)
+            titleField.forceActiveFocus()
+        }
     }
 
     Connections {
@@ -115,6 +118,12 @@ Rectangle {
             background: null
             padding: 0
             selectByMouse: true
+
+            onActiveFocusChanged: {
+                if (activeFocus) {
+                    taskListViewModel.selectTask(root.taskIndex)
+                }
+            }
 
             onEditingFinished: {
                 if (text !== root.taskTitle && text.trim() !== "") {
