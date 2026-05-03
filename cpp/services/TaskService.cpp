@@ -47,6 +47,14 @@ QString TaskService::getListType(const QString &listName) {
   return m_cacheService->getListType(listName);
 }
 
+bool TaskService::getListPinned(const QString &listName) {
+  return m_cacheService->getListPinned(listName);
+}
+
+bool TaskService::getListArchived(const QString &listName) {
+  return m_cacheService->getListArchived(listName);
+}
+
 bool TaskService::createList(const QString &listName, const QString &color,
                              const QString &folderName,
                              const QString &listType) {
@@ -58,12 +66,121 @@ bool TaskService::createList(const QString &listName, const QString &color,
   return false;
 }
 
+bool TaskService::renameList(const QString &oldName, const QString &newName) {
+  if (m_cacheService->renameList(oldName, newName)) {
+    emit listsChanged();
+    emit tasksChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::deleteList(const QString &listName) {
+  if (m_cacheService->deleteList(listName)) {
+    emit listsChanged();
+    emit tasksChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::moveTasksToList(const QString &fromList,
+                                  const QString &toList) {
+  if (m_cacheService->moveTasksToList(fromList, toList)) {
+    emit tasksChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::setListPinned(const QString &listName, bool pinned) {
+  if (m_cacheService->setListPinned(listName, pinned)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::setListArchived(const QString &listName, bool archived) {
+  if (m_cacheService->setListArchived(listName, archived)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::updateListFolder(const QString &listName,
+                                   const QString &folderName) {
+  if (m_cacheService->updateListFolder(listName, folderName)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::duplicateListWithTasks(const QString &listName,
+                                         const QString &newListName) {
+  if (m_cacheService->duplicateListWithTasks(listName, newListName)) {
+    emit listsChanged();
+    emit tasksChanged();
+    return true;
+  }
+  return false;
+}
+
 QStringList TaskService::getFolders() {
   return m_cacheService->getAllFolders();
 }
 
+bool TaskService::getFolderPinned(const QString &folderName) {
+  return m_cacheService->getFolderPinned(folderName);
+}
+
 bool TaskService::createFolder(const QString &folderName) {
   if (m_cacheService->saveFolder(folderName)) {
+    emit listsChanged();
+    emit tasksChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::renameFolder(const QString &oldName, const QString &newName) {
+  if (m_cacheService->renameFolder(oldName, newName)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::deleteFolder(const QString &folderName) {
+  if (m_cacheService->deleteFolder(folderName)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::setFolderPinned(const QString &folderName, bool pinned) {
+  if (m_cacheService->setFolderPinned(folderName, pinned)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::ungroupFolder(const QString &folderName) {
+  if (m_cacheService->ungroupFolder(folderName)) {
+    emit listsChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskService::duplicateFolder(const QString &folderName,
+                                  const QString &newFolderName) {
+  if (m_cacheService->duplicateFolder(folderName, newFolderName)) {
+    emit listsChanged();
     emit tasksChanged();
     return true;
   }

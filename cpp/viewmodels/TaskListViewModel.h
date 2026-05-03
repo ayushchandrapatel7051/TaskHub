@@ -65,6 +65,18 @@ public:
                               const QString &color = "",
                               const QString &folderName = "",
                               const QString &listType = "Task List");
+  Q_INVOKABLE bool renameList(const QString &oldName, const QString &newName);
+  Q_INVOKABLE bool deleteList(const QString &listName);
+  Q_INVOKABLE bool duplicateList(const QString &listName);
+  Q_INVOKABLE bool archiveList(const QString &listName);
+  Q_INVOKABLE bool pinList(const QString &listName, bool pinned);
+  Q_INVOKABLE bool getListPinned(const QString &listName) const;
+  Q_INVOKABLE bool getListArchived(const QString &listName) const;
+  Q_INVOKABLE bool renameFolder(const QString &oldName, const QString &newName);
+  Q_INVOKABLE bool pinFolder(const QString &folderName, bool pinned);
+  Q_INVOKABLE bool getFolderPinned(const QString &folderName) const;
+  Q_INVOKABLE bool ungroupFolder(const QString &folderName);
+  Q_INVOKABLE bool duplicateFolder(const QString &folderName);
   Q_INVOKABLE void createFolder(const QString &folderName);
   Q_INVOKABLE void createTag(const QString &tagName, const QString &color = "",
                              const QString &parentTag = "");

@@ -11,6 +11,10 @@ Rectangle {
     property string activeView: "tasks"
     property int refreshRevision: 0
     property var pickerColors: ["#ef4444", "#fb7185", "#fb923c", "#facc15", "#e7f44a", "#22c55e", "#3b82f6", "#6366f1", "#bb68ef"]
+    property string contextMenuType: "list" // "list" | "folder"
+    property string contextMenuListName: ""
+    property string contextMenuFolderName: ""
+    property string contextMenuTargetKey: ""
     signal viewRequested(string view)
 
     function openCenteredPopup(popup) {
@@ -22,6 +26,62 @@ Rectangle {
     function folderOptions() {
         root.refreshRevision
         return ["None"].concat(taskListViewModel.getAllFolders()).concat(["+ New Folder"])
+    }
+
+    function openContextMenu(anchorItem, type, name) {
+        if (!Overlay.overlay || !anchorItem) return
+        contextMenuType = type
+        if (type === "list") {
+            contextMenuListName = name
+            contextMenuFolderName = ""
+            contextMenuTargetKey = "list:" + name
+        } else {
+            contextMenuFolderName = name
+            contextMenuListName = ""
+            contextMenuTargetKey = "folder:" + name
+        }
+
+        listContextMenu.close()
+        var pos = anchorItem.mapToItem(Overlay.overlay, 0, 0)
+        listContextMenu.x = Math.min(pos.x + anchorItem.width - listContextMenu.width,
+                                     Overlay.overlay.width - listContextMenu.width - 12)
+        listContextMenu.y = Math.min(pos.y + anchorItem.height,
+                                     Overlay.overlay.height - listContextMenu.height - 12)
+        listContextMenu.open()
+    }
+
+    function openRenamePopup(type, name) {
+        renamePopup.targetType = type
+        renamePopup.oldName = name
+        renameInput.text = name
+        renamePopup.open()
+        renameInput.forceActiveFocus()
+    }
+
+    function listMenuItems() {
+        root.refreshRevision
+        var pinned = taskListViewModel.getListPinned(contextMenuListName)
+        var archived = taskListViewModel.getListArchived(contextMenuListName)
+        return [
+            "Edit",
+            pinned ? "Unpin" : "Pin",
+            "Duplicate",
+            "Share",
+            archived ? "Unarchive" : "Archive",
+            "Delete"
+        ]
+    }
+
+    function folderMenuItems() {
+        root.refreshRevision
+        var pinned = taskListViewModel.getFolderPinned(contextMenuFolderName)
+        return [
+            "Add List",
+            "Edit",
+            pinned ? "Unpin" : "Pin",
+            "Duplicate",
+            "Ungroup"
+        ]
     }
 
     component SidebarComboBox: ComboBox {
@@ -96,16 +156,22 @@ Rectangle {
         id: listRow
         property string listName: ""
         property int indent: 0
+        property bool hoverActive: listMouse.containsMouse || menuBtnHover.containsMouse ||
+                                   (listContextMenu.visible && root.contextMenuTargetKey === "list:" + listRow.listName)
+        property bool isPinned: {
+            root.refreshRevision
+            return taskListViewModel.getListPinned(listRow.listName)
+        }
         Layout.fillWidth: true
         height: 34
         radius: 7
-        color: taskListViewModel.activeFilterList === listName ? "#343434" : (listMouse.containsMouse ? "#2b2b2b" : "transparent")
+        color: taskListViewModel.activeFilterList === listName ? "#343434" : (hoverActive ? "#2b2b2b" : "transparent")
 
         RowLayout {
             anchors.fill: parent
             anchors.leftMargin: 12 + listRow.indent
-            anchors.rightMargin: 12
-            spacing: 10
+            anchors.rightMargin: 38
+            spacing: 8
 
             SidebarIcon {
                 Layout.preferredWidth: 16
@@ -124,6 +190,13 @@ Rectangle {
                 elide: Text.ElideRight
             }
 
+            Text {
+                visible: listRow.isPinned
+                text: "📌"
+                color: "#bdbdbd"
+                font.pixelSize: 12
+            }
+
             Rectangle {
                 width: 8
                 height: 8
@@ -140,6 +213,7 @@ Rectangle {
                 color: "#858585"
                 font.pixelSize: 11
                 font.family: Theme.fontFamily
+                visible: !listRow.hoverActive
             }
         }
 
@@ -148,7 +222,40 @@ Rectangle {
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: taskListViewModel.setFilterList(listRow.listName)
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onClicked: function(mouse) {
+                if (mouse.button === Qt.RightButton) {
+                    openContextMenu(menuButton, "list", listRow.listName)
+                } else {
+                    taskListViewModel.setFilterList(listRow.listName)
+                }
+            }
+        }
+
+        Rectangle {
+            id: menuButton
+            width: 24
+            height: 24
+            radius: 6
+            anchors.right: parent.right
+            anchors.rightMargin: 6
+            anchors.verticalCenter: parent.verticalCenter
+            color: menuBtnHover.containsMouse ? "#2a2a2a" : "transparent"
+            visible: listRow.hoverActive
+
+            Text {
+                anchors.centerIn: parent
+                text: "..."
+                color: "#9a9a9a"
+                font.pixelSize: 14
+            }
+
+            HoverHandler { id: menuBtnHover }
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: openContextMenu(menuButton, "list", listRow.listName)
+            }
         }
     }
 
@@ -474,19 +581,27 @@ Rectangle {
                             }
 
                             delegate: ColumnLayout {
+                                property string folderName: modelData
+                                property bool folderPinned: {
+                                    root.refreshRevision
+                                    return taskListViewModel.getFolderPinned(folderName)
+                                }
+                                property bool folderHoverActive: folderMouse.containsMouse || folderMenuHover.containsMouse ||
+                                    (listContextMenu.visible && root.contextMenuTargetKey === "folder:" + folderName)
                                 Layout.fillWidth: true
                                 spacing: 2
 
                                 Rectangle {
+                                    id: folderRow
                                     Layout.fillWidth: true
                                     height: 30
                                     radius: 7
-                                    color: "transparent"
+                                    color: folderHoverActive ? "#2b2b2b" : "transparent"
 
                                     RowLayout {
                                         anchors.fill: parent
                                         anchors.leftMargin: 10
-                                        anchors.rightMargin: 12
+                                        anchors.rightMargin: 36
                                         spacing: 8
 
                                         Text {
@@ -510,6 +625,52 @@ Rectangle {
                                             font.family: Theme.fontFamily
                                             Layout.fillWidth: true
                                             elide: Text.ElideRight
+                                        }
+
+                                        Text {
+                                            visible: folderPinned
+                                            text: "📌"
+                                            color: "#bdbdbd"
+                                            font.pixelSize: 11
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: folderMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: function(mouse) {
+                                            if (mouse.button === Qt.RightButton) {
+                                                openContextMenu(folderMenuButton, "folder", folderName)
+                                            }
+                                        }
+                                    }
+
+                                    Rectangle {
+                                        id: folderMenuButton
+                                        width: 22
+                                        height: 22
+                                        radius: 6
+                                        anchors.right: parent.right
+                                        anchors.rightMargin: 6
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        color: folderMenuHover.containsMouse ? "#2a2a2a" : "transparent"
+                                        visible: folderHoverActive
+
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "..."
+                                            color: "#9a9a9a"
+                                            font.pixelSize: 13
+                                        }
+
+                                        HoverHandler { id: folderMenuHover }
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: openContextMenu(folderMenuButton, "folder", folderName)
                                         }
                                     }
                                 }
@@ -786,6 +947,180 @@ Rectangle {
             hash = tagName.charCodeAt(i) + ((hash << 5) - hash)
         }
         return colors[Math.abs(hash) % colors.length]
+    }
+
+    Popup {
+        id: listContextMenu
+        parent: Overlay.overlay
+        modal: false
+        padding: 6
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        background: Rectangle {
+            color: "#1f1f1f"
+            radius: 8
+            border.color: "#2f2f2f"
+            border.width: 1
+        }
+
+        ColumnLayout {
+            width: 180
+            spacing: 2
+
+            Repeater {
+                model: root.contextMenuType === "folder"
+                    ? folderMenuItems()
+                    : listMenuItems()
+
+                delegate: Rectangle {
+                    Layout.fillWidth: true
+                    height: 30
+                    radius: 6
+                    color: menuItemHover.containsMouse ? "#2a2a2a" : "transparent"
+
+                    Text {
+                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.left: parent.left
+                        anchors.leftMargin: 10
+                        text: modelData
+                        color: modelData === "Delete" ? Theme.accentRed : "#e0e0e0"
+                        font.pixelSize: 12
+                        font.family: Theme.fontFamily
+                    }
+
+                    HoverHandler { id: menuItemHover }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            if (root.contextMenuType === "folder") {
+                                if (modelData === "Add List") {
+                                    newListPopup.selectedFolder = root.contextMenuFolderName
+                                    openCenteredPopup(newListPopup)
+                                } else if (modelData === "Edit") {
+                                    openRenamePopup("folder", root.contextMenuFolderName)
+                                } else if (modelData === "Pin" || modelData === "Unpin") {
+                                    var pinFolder = modelData === "Pin"
+                                    taskListViewModel.pinFolder(root.contextMenuFolderName, pinFolder)
+                                } else if (modelData === "Duplicate") {
+                                    taskListViewModel.duplicateFolder(root.contextMenuFolderName)
+                                } else if (modelData === "Ungroup") {
+                                    taskListViewModel.ungroupFolder(root.contextMenuFolderName)
+                                }
+                            } else {
+                                if (modelData === "Edit") {
+                                    openRenamePopup("list", root.contextMenuListName)
+                                } else if (modelData === "Pin" || modelData === "Unpin") {
+                                    var pinList = modelData === "Pin"
+                                    taskListViewModel.pinList(root.contextMenuListName, pinList)
+                                } else if (modelData === "Duplicate") {
+                                    taskListViewModel.duplicateList(root.contextMenuListName)
+                                } else if (modelData === "Share") {
+                                    if (Qt.application && Qt.application.clipboard) {
+                                        Qt.application.clipboard.setText(root.contextMenuListName)
+                                    }
+                                } else if (modelData === "Archive" || modelData === "Unarchive") {
+                                    taskListViewModel.archiveList(root.contextMenuListName)
+                                } else if (modelData === "Delete") {
+                                    taskListViewModel.deleteList(root.contextMenuListName)
+                                }
+                            }
+                            listContextMenu.close()
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Popup {
+        id: renamePopup
+        parent: Overlay.overlay
+        modal: true
+        width: 320
+        height: 160
+        padding: 0
+        closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutside
+
+        property string targetType: "list"
+        property string oldName: ""
+
+        Overlay.modal: Rectangle { color: "#88000000" }
+
+        background: Rectangle {
+            color: "#252525"
+            radius: 12
+            border.color: "#3b3b3b"
+            border.width: 1
+        }
+
+        ColumnLayout {
+            anchors.fill: parent
+            anchors.margins: 18
+            spacing: 14
+
+            Text {
+                text: renamePopup.targetType === "folder" ? "Rename Folder" : "Rename List"
+                color: "#f5f5f5"
+                font.pixelSize: 16
+                font.bold: true
+                font.family: Theme.fontFamily
+            }
+
+            TextField {
+                id: renameInput
+                Layout.fillWidth: true
+                Layout.preferredHeight: 36
+                placeholderText: renamePopup.targetType === "folder" ? "Folder name" : "List name"
+                color: "#f5f5f5"
+                placeholderTextColor: "#777777"
+                font.family: Theme.fontFamily
+                background: Rectangle {
+                    radius: 7
+                    color: "#303030"
+                    border.color: "#3b3b3b"
+                }
+                onAccepted: renameConfirm.clicked()
+            }
+
+            RowLayout {
+                Layout.fillWidth: true
+                Item { Layout.fillWidth: true }
+                Rectangle {
+                    width: 76
+                    height: 30
+                    radius: 7
+                    color: renameCancelHover.containsMouse ? "#333333" : "transparent"
+                    border.color: "#3b3b3b"
+                    Text { anchors.centerIn: parent; text: "Cancel"; color: "#bdbdbd"; font.pixelSize: 13; font.family: Theme.fontFamily }
+                    HoverHandler { id: renameCancelHover }
+                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: renamePopup.close() }
+                }
+                Rectangle {
+                    id: renameConfirm
+                    width: 76
+                    height: 30
+                    radius: 7
+                    color: renameInput.text.trim() === "" ? "#303030" : Theme.primary
+                    opacity: renameInput.text.trim() === "" ? 0.65 : 1
+                    Text { anchors.centerIn: parent; text: "Save"; color: "#ffffff"; font.pixelSize: 13; font.family: Theme.fontFamily }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: renameInput.text.trim() === "" ? Qt.ArrowCursor : Qt.PointingHandCursor
+                        onClicked: {
+                            var newName = renameInput.text.trim()
+                            if (newName === "") return
+                            if (renamePopup.targetType === "folder") {
+                                taskListViewModel.renameFolder(renamePopup.oldName, newName)
+                            } else {
+                                taskListViewModel.renameList(renamePopup.oldName, newName)
+                            }
+                            renamePopup.close()
+                        }
+                    }
+                }
+            }
+        }
     }
 
     Popup {

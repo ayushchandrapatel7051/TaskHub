@@ -21,12 +21,31 @@ public:
   Q_INVOKABLE QStringList getRootLists();
   Q_INVOKABLE QStringList getListsForFolder(const QString &folderName);
   Q_INVOKABLE QString getListType(const QString &listName);
+  Q_INVOKABLE bool getListPinned(const QString &listName);
+  Q_INVOKABLE bool getListArchived(const QString &listName);
   Q_INVOKABLE bool createList(const QString &listName,
                               const QString &color = "",
                               const QString &folderName = "",
                               const QString &listType = "Task List");
+  Q_INVOKABLE bool renameList(const QString &oldName, const QString &newName);
+  Q_INVOKABLE bool deleteList(const QString &listName);
+  Q_INVOKABLE bool moveTasksToList(const QString &fromList,
+                                   const QString &toList);
+  Q_INVOKABLE bool setListPinned(const QString &listName, bool pinned);
+  Q_INVOKABLE bool setListArchived(const QString &listName, bool archived);
+  Q_INVOKABLE bool updateListFolder(const QString &listName,
+                                    const QString &folderName);
+  Q_INVOKABLE bool duplicateListWithTasks(const QString &listName,
+                                          const QString &newListName);
   Q_INVOKABLE QStringList getFolders();
+  Q_INVOKABLE bool getFolderPinned(const QString &folderName);
   Q_INVOKABLE bool createFolder(const QString &folderName);
+  Q_INVOKABLE bool renameFolder(const QString &oldName, const QString &newName);
+  Q_INVOKABLE bool deleteFolder(const QString &folderName);
+  Q_INVOKABLE bool setFolderPinned(const QString &folderName, bool pinned);
+  Q_INVOKABLE bool ungroupFolder(const QString &folderName);
+  Q_INVOKABLE bool duplicateFolder(const QString &folderName,
+                                   const QString &newFolderName);
   Q_INVOKABLE QStringList getTags();
   Q_INVOKABLE bool createTag(const QString &tagName, const QString &color = "",
                              const QString &parentTag = "");

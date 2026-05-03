@@ -409,6 +409,140 @@ void TaskListViewModel::createList(const QString &listName,
   }
 }
 
+bool TaskListViewModel::renameList(const QString &oldName,
+                                   const QString &newName) {
+  if (m_taskService->renameList(oldName, newName)) {
+    refreshNotesListCache();
+    emit filterChanged();
+    emit tasksModified();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::deleteList(const QString &listName) {
+  if (m_taskService->deleteList(listName)) {
+    refreshNotesListCache();
+    emit filterChanged();
+    emit tasksModified();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::duplicateList(const QString &listName) {
+  QString base = listName.trimmed();
+  if (base.isEmpty())
+    return false;
+
+  QStringList all = m_taskService->getLists();
+  QString newName = base + QStringLiteral(" Copy");
+  int suffix = 2;
+  auto exists = [&all](const QString &name) {
+    for (const QString &item : all) {
+      if (item.compare(name, Qt::CaseInsensitive) == 0)
+        return true;
+    }
+    return false;
+  };
+  while (exists(newName)) {
+    newName = base + QStringLiteral(" Copy ") + QString::number(suffix++);
+  }
+
+  if (m_taskService->duplicateListWithTasks(base, newName)) {
+    emit filterChanged();
+    emit tasksModified();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::archiveList(const QString &listName) {
+  QString name = listName.trimmed();
+  if (name.isEmpty())
+    return false;
+
+  bool archived = m_taskService->getListArchived(name);
+  if (m_taskService->setListArchived(name, !archived)) {
+    emit filterChanged();
+    emit tasksModified();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::pinList(const QString &listName, bool pinned) {
+  if (m_taskService->setListPinned(listName, pinned)) {
+    emit filterChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::getListPinned(const QString &listName) const {
+  return m_taskService->getListPinned(listName);
+}
+
+bool TaskListViewModel::getListArchived(const QString &listName) const {
+  return m_taskService->getListArchived(listName);
+}
+
+bool TaskListViewModel::renameFolder(const QString &oldName,
+                                     const QString &newName) {
+  if (m_taskService->renameFolder(oldName, newName)) {
+    emit filterChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::pinFolder(const QString &folderName, bool pinned) {
+  if (m_taskService->setFolderPinned(folderName, pinned)) {
+    emit filterChanged();
+    return true;
+  }
+  return false;
+}
+
+bool TaskListViewModel::getFolderPinned(const QString &folderName) const {
+  return m_taskService->getFolderPinned(folderName);
+}
+
+bool TaskListViewModel::ungroupFolder(const QString &folderName) {
+  if (!m_taskService->ungroupFolder(folderName))
+    return false;
+  m_taskService->deleteFolder(folderName);
+  emit filterChanged();
+  return true;
+}
+
+bool TaskListViewModel::duplicateFolder(const QString &folderName) {
+  QString base = folderName.trimmed();
+  if (base.isEmpty())
+    return false;
+
+  QStringList allFolders = m_taskService->getFolders();
+  QString newName = base + QStringLiteral(" Copy");
+  int suffix = 2;
+  auto exists = [&allFolders](const QString &name) {
+    for (const QString &item : allFolders) {
+      if (item.compare(name, Qt::CaseInsensitive) == 0)
+        return true;
+    }
+    return false;
+  };
+  while (exists(newName)) {
+    newName = base + QStringLiteral(" Copy ") + QString::number(suffix++);
+  }
+
+  if (m_taskService->duplicateFolder(base, newName)) {
+    emit filterChanged();
+    emit tasksModified();
+    return true;
+  }
+  return false;
+}
+
 void TaskListViewModel::createFolder(const QString &folderName) {
   if (m_taskService->createFolder(folderName)) {
     emit filterChanged();
